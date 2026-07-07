@@ -1,0 +1,9 @@
+# เอกสารธุรกิจ — เก็บในเครื่องเท่านั้น ห้าม push ขึ้น public repo
+01-product-and-technical-design.md
+02-business-plan-and-financials.md
+03-strategy-roadmap-and-execution.md
+STORE-ROADMAP.md
+AI-OPS-PLAYBOOK.md
+
+node_modules/
+*.log

@@ -1,0 +1,13 @@
+{
+  "name": "ORA — หมอดู AI ประจำตัวคุณ",
+  "short_name": "ORA",
+  "description": "ดูดวงเฉพาะตัวจากวันเกิดจริง มหาทักษา เลขศาสตร์ ไพ่ทาโรต์ พร้อม AI พี่หมอโอรา",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#141329",
+  "theme_color": "#141329",
+  "lang": "th",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

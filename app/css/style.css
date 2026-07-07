@@ -1,0 +1,147 @@
+/* ============ ORA — Modern Mystic theme ============ */
+:root {
+  --bg1: #141329; --bg2: #1f1c3d; --card: #232145; --card2: #2b2854;
+  --gold: #e6c36b; --gold-dim: #b39447; --text: #eceaf6; --muted: #9a95c0;
+  --accent: #8f7ae6; --good: #6fd39b; --warn: #e0a353; --bad: #e07070;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: "Anuphan", system-ui, sans-serif;
+  background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 60%, #241d3f 100%);
+  color: var(--text); min-height: 100vh;
+  max-width: 520px; margin: 0 auto;
+  padding-bottom: 84px;
+}
+.hidden { display: none !important; }
+.screen { padding: 16px 16px 8px; animation: fadein .25s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+/* ---- header ---- */
+.top { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px 14px; }
+.logo-sm { font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+.date { color: var(--muted); font-size: .85rem; }
+
+/* ---- onboarding ---- */
+.onboard-wrap { padding-top: 8vh; }
+.logo-big { font-size: 2.4rem; font-weight: 700; color: var(--gold); text-align: center; letter-spacing: 4px; text-shadow: 0 0 24px rgba(230,195,107,.35); }
+.tagline { text-align: center; color: var(--muted); margin: 12px 0 24px; line-height: 1.6; }
+
+/* ---- cards & forms ---- */
+.card {
+  background: var(--card); border: 1px solid rgba(230,195,107,.14);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.25);
+}
+.card h3 { color: var(--gold); font-size: 1rem; margin-bottom: 10px; }
+label { display: block; font-size: .9rem; color: var(--muted); margin: 12px 0 6px; }
+.hint { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+.hint a { color: var(--accent); }
+input, select, textarea {
+  width: 100%; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12); background: var(--card2);
+  color: var(--text); font-family: inherit; font-size: 1rem;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); }
+
+.btn-primary {
+  width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 12px;
+  background: linear-gradient(90deg, var(--gold), #d4a94a); color: #241d0d;
+  font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+}
+.btn-primary:active { transform: scale(.98); }
+.btn-ghost {
+  width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.2); background: transparent; color: var(--text); font-family: inherit; font-size: .95rem;
+}
+.btn-danger { width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid rgba(224,112,112,.5); background: transparent; color: var(--bad); font-family: inherit; font-size: .95rem; }
+.disclaimer { font-size: .72rem; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+.center { text-align: center; }
+
+/* ---- daily fortune ---- */
+.hero {
+  background: linear-gradient(135deg, var(--card) 0%, #322a5e 100%);
+  border: 1px solid rgba(230,195,107,.25); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 14px;
+}
+.hero .greet { font-size: 1.15rem; font-weight: 600; }
+.hero .overall { font-size: 1.6rem; color: var(--gold); margin: 6px 0; letter-spacing: 3px; }
+.hero .theme-t { color: var(--gold); font-weight: 600; margin-top: 8px; }
+.hero .theme-d { color: var(--text); line-height: 1.7; font-size: .95rem; margin-top: 4px; }
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.score-item { background: var(--card); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.07); }
+.score-item .k { color: var(--muted); font-size: .82rem; }
+.score-item .v { color: var(--gold); letter-spacing: 2px; }
+.color-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.color-pill { display: flex; align-items: center; gap: 8px; background: var(--card2); border-radius: 999px; padding: 6px 14px 6px 8px; font-size: .85rem; }
+.dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); }
+.list-line { margin: 6px 0; line-height: 1.65; font-size: .95rem; }
+.affirm { font-style: italic; color: var(--gold); text-align: center; padding: 12px; line-height: 1.6; }
+
+/* ---- feedback ---- */
+.fb-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.fb-btn { border: 1px solid rgba(255,255,255,.18); background: var(--card2); color: var(--text);
+  border-radius: 999px; padding: 8px 14px; font-family: inherit; font-size: .82rem; cursor: pointer; }
+.fb-btn.sel { background: var(--accent); border-color: var(--accent); }
+.fb-thanks { text-align: center; color: var(--good); font-size: .85rem; margin-top: 8px; }
+
+/* ---- chat ---- */
+.mode-note { font-size: .78rem; color: var(--muted); background: var(--card); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; line-height: 1.5; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip { border: 1px solid rgba(230,195,107,.35); background: transparent; color: var(--text);
+  border-radius: 999px; padding: 8px 14px; font-family: inherit; font-size: .85rem; cursor: pointer; }
+.chip.sel { background: var(--gold); color: #241d0d; font-weight: 600; }
+#chat-box { min-height: 200px; max-height: 52vh; overflow-y: auto; padding: 4px 0; }
+.msg { max-width: 88%; padding: 12px 14px; border-radius: 14px; margin: 8px 0; line-height: 1.7; font-size: .95rem; white-space: pre-wrap; word-break: break-word; }
+.msg.user { background: var(--accent); margin-left: auto; border-bottom-right-radius: 4px; }
+.msg.bot { background: var(--card); border: 1px solid rgba(230,195,107,.18); border-bottom-left-radius: 4px; }
+.msg.bot strong, .msg.bot b { color: var(--gold); }
+.msg.typing { color: var(--muted); font-style: italic; }
+.chat-input { display: flex; gap: 8px; margin-top: 10px; position: sticky; bottom: 88px; }
+.chat-input textarea { resize: none; }
+.btn-send { width: 52px; border: none; border-radius: 12px; background: var(--gold); color: #241d0d; font-size: 1.2rem; cursor: pointer; }
+
+/* ---- tarot ---- */
+.tarot-fan { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 14px 0; }
+.tcard {
+  aspect-ratio: 2/3; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(135deg, #322a5e, #232145);
+  border: 1px solid rgba(230,195,107,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: var(--gold); transition: transform .15s;
+}
+.tcard:hover { transform: translateY(-4px); }
+.tcard.picked { background: var(--gold); color: #241d0d; transform: translateY(-6px); }
+.tres { border-left: 3px solid var(--gold); padding-left: 12px; margin: 14px 0; }
+.tres .tname { color: var(--gold); font-weight: 700; }
+.tres p { line-height: 1.7; font-size: .95rem; margin-top: 4px; }
+
+/* ---- numbers ---- */
+.num-score { font-size: 2rem; color: var(--gold); font-weight: 700; text-align: center; margin: 10px 0; }
+.pair-line { display: flex; gap: 10px; align-items: baseline; margin: 8px 0; line-height: 1.6; font-size: .92rem; }
+.pair-badge { min-width: 42px; text-align: center; border-radius: 8px; padding: 2px 8px; font-weight: 700; }
+.pair-badge.good { background: rgba(111,211,155,.18); color: var(--good); }
+.pair-badge.mid { background: rgba(154,149,192,.18); color: var(--muted); }
+.pair-badge.low { background: rgba(224,163,83,.18); color: var(--warn); }
+
+/* ---- personalization ---- */
+.pscore { height: 10px; background: var(--card2); border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
+#pscore-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); width: 0; transition: width .6s; }
+
+/* ---- nav ---- */
+nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 520px; display: flex;
+  background: rgba(20,19,41,.92); backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(230,195,107,.15); padding: 6px 0 max(10px, env(safe-area-inset-bottom));
+  z-index: 50;
+}
+nav button {
+  flex: 1; background: none; border: none; color: var(--muted);
+  font-family: inherit; font-size: .7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+nav button span { font-size: 1.25rem; }
+nav button.active { color: var(--gold); }

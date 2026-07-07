@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ORA — หมอดู AI ประจำตัวคุณ</title>
+<meta name="description" content="ดูดวงเฉพาะตัวจากวันเกิดจริง มหาทักษา เลขศาสตร์ ไพ่ทาโรต์ พร้อม AI พี่หมอโอราที่ถาม-ตอบได้">
+<meta name="theme-color" content="#141329">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ Onboarding ============ -->
+<section id="scr-onboard" class="screen">
+  <div class="onboard-wrap">
+    <div class="logo-big">✦ ORA ✦</div>
+    <p class="tagline">หมอดู AI ที่ดูจาก "วันเกิดจริงของคุณ"<br>ไม่ใช่คำทำนายเหมารวมตามราศี</p>
+    <div class="card">
+      <label>ชื่อเล่นของคุณ</label>
+      <input id="ob-name" type="text" placeholder="เช่น พลอย" maxlength="30">
+      <label>วันเดือนปีเกิด (ค.ศ.)</label>
+      <input id="ob-dob" type="date" min="1930-01-01">
+      <label>เวลาเกิด <span class="hint">(ถ้าทราบ — ทำให้แม่นขึ้น โดยเฉพาะคนเกิดวันพุธ)</span></label>
+      <input id="ob-time" type="time">
+      <label>อาชีพ / สิ่งที่ทำอยู่ <span class="hint">(ไม่บังคับ — ช่วยให้คำแนะนำตรงชีวิตจริง)</span></label>
+      <input id="ob-job" type="text" placeholder="เช่น พนักงานการตลาด, เจ้าของร้านกาแฟ" maxlength="60">
+      <button id="ob-go" class="btn-primary">เปิดดวงของฉัน ✨</button>
+      <p class="disclaimer">ข้อมูลเก็บไว้ในเครื่องของคุณเท่านั้น · บริการเพื่อการสะท้อนตนเองและความบันเทิง ไม่ใช่คำแนะนำทางการแพทย์ การเงิน หรือกฎหมาย</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Home: ดวงวันนี้ ============ -->
+<section id="scr-home" class="screen hidden">
+  <header class="top"><span class="logo-sm">✦ ORA</span><span id="home-date" class="date"></span></header>
+  <div id="home-content"></div>
+</section>
+
+<!-- ============ ถามดวง (แชทพี่หมอโอรา) ============ -->
+<section id="scr-ask" class="screen hidden">
+  <header class="top"><span class="logo-sm">💬 ห้องพี่หมอโอรา</span></header>
+  <div id="ask-mode-note" class="mode-note"></div>
+  <div id="ask-cats" class="chips">
+    <button class="chip" data-cat="ความรัก">💕 ความรัก</button>
+    <button class="chip" data-cat="การงาน">💼 การงาน</button>
+    <button class="chip" data-cat="การเงิน">💰 การเงิน</button>
+    <button class="chip" data-cat="ครอบครัว">🏠 ครอบครัว</button>
+    <button class="chip" data-cat="การเรียน">📚 การเรียน</button>
+    <button class="chip" data-cat="ภาพรวมชีวิต">🌟 ภาพรวม</button>
+  </div>
+  <div id="chat-box"></div>
+  <div class="chat-input">
+    <textarea id="ask-text" rows="2" placeholder="พิมพ์คำถามของคุณ เช่น ควรย้ายงานไหม..."></textarea>
+    <button id="ask-send" class="btn-send">➤</button>
+  </div>
+</section>
+
+<!-- ============ ไพ่ทาโรต์ ============ -->
+<section id="scr-tarot" class="screen hidden">
+  <header class="top"><span class="logo-sm">🎴 ไพ่ทาโรต์</span></header>
+  <div id="tarot-content"></div>
+</section>
+
+<!-- ============ ตัวเลข ============ -->
+<section id="scr-num" class="screen hidden">
+  <header class="top"><span class="logo-sm">🔢 ศาสตร์ตัวเลข</span></header>
+  <div class="card">
+    <h3>เลขศาสตร์วันเกิดของคุณ</h3>
+    <div id="num-lifepath"></div>
+  </div>
+  <div class="card">
+    <h3>วิเคราะห์เบอร์โทรศัพท์</h3>
+    <input id="num-phone" type="tel" placeholder="เช่น 0812345678" maxlength="12" inputmode="numeric">
+    <button id="num-go" class="btn-primary">วิเคราะห์เบอร์นี้</button>
+    <div id="num-result"></div>
+  </div>
+</section>
+
+<!-- ============ ตั้งค่า ============ -->
+<section id="scr-set" class="screen hidden">
+  <header class="top"><span class="logo-sm">⚙️ ตั้งค่า</span></header>
+  <div class="card">
+    <h3>ระดับความเฉพาะตัวของดวงคุณ</h3>
+    <div class="pscore"><div id="pscore-bar"></div></div>
+    <p id="pscore-text" class="hint"></p>
+  </div>
+  <div class="card">
+    <h3>🤖 โหมด AI — พี่หมอโอราคุยได้จริง</h3>
+    <p class="hint">ใส่ Gemini API key (ขอฟรีที่ <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>) — key เก็บในเครื่องคุณเท่านั้น ไม่ถูกส่งไปที่อื่นนอกจาก Google</p>
+    <input id="set-key" type="password" placeholder="วาง API key ที่นี่">
+    <button id="set-key-save" class="btn-primary">บันทึก key</button>
+    <p id="set-key-status" class="hint"></p>
+  </div>
+  <div class="card">
+    <h3>โทนคำทำนายที่ชอบ</h3>
+    <select id="set-tone">
+      <option value="">— เลือก —</option>
+      <option value="ตรงไปตรงมา">ตรงไปตรงมา ชัดๆ</option>
+      <option value="นุ่มนวลให้กำลังใจ">นุ่มนวล ให้กำลังใจ</option>
+      <option value="ละเอียดเชิงวิเคราะห์">ละเอียด เชิงวิเคราะห์</option>
+      <option value="กระชับสั้นๆ">กระชับ สั้นๆ</option>
+    </select>
+  </div>
+  <div class="card">
+    <h3>🧠 ความทรงจำของพี่หมอ</h3>
+    <p id="set-memory" class="hint"></p>
+    <p class="hint">พี่หมอจำเรื่องที่คุยกันไว้ในเครื่องของคุณเท่านั้น (สูงสุด 30 เรื่องล่าสุด) เพื่อให้คำทำนายต่อเนื่องและใส่ใจขึ้น — ไม่ถูกส่งไปเก็บที่ไหน</p>
+    <button id="set-clear-memory" class="btn-ghost">ล้างความทรงจำแชท (เริ่มคุยใหม่)</button>
+  </div>
+  <div class="card">
+    <h3>ข้อมูลของฉัน</h3>
+    <p id="set-profile" class="hint"></p>
+    <button id="set-edit" class="btn-ghost">แก้ไขข้อมูลเกิด</button>
+    <button id="set-wipe" class="btn-danger">ลบข้อมูลทั้งหมดออกจากเครื่อง</button>
+  </div>
+  <p class="disclaimer center">ORA เป็นบริการเพื่อความบันเทิงและการสะท้อนตนเอง<br>ไม่ใช่คำแนะนำทางการแพทย์ การเงิน หรือกฎหมาย</p>
+</section>
+
+<!-- ============ Bottom Nav ============ -->
+<nav id="nav" class="hidden">
+  <button data-scr="home" class="active"><span>🌅</span>วันนี้</button>
+  <button data-scr="ask"><span>💬</span>ถามดวง</button>
+  <button data-scr="tarot"><span>🎴</span>ไพ่</button>
+  <button data-scr="num"><span>🔢</span>ตัวเลข</button>
+  <button data-scr="set"><span>⚙️</span>ตั้งค่า</button>
+</nav>
+
+<script src="js/knowledge.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
