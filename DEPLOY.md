@@ -11,17 +11,12 @@
 | **รวม** | **0 บาท** |
 | (ทางเลือก) โดเมนเอง เช่น ora.app | ~400–600 บาท/ปี — ยังไม่จำเป็นตอนนี้ |
 
-## ขั้นตอน Deploy ครั้งแรก (~15 นาที ทำครั้งเดียว)
+## ✅ สถานะ: Deploy แล้ว (7 ก.ค. 2026)
 
-1. สร้าง repo บน GitHub (ตั้งชื่อ เช่น `ora`) — ถ้ายังไม่มีบัญชี สมัครฟรีที่ github.com
-2. ใน Claude Code สั่ง:
-   ```
-   ช่วย init git ในโฟลเดอร์นี้ commit ทุกไฟล์ แล้ว push ขึ้น repo <ลิงก์ repo ของฉัน>
-   ```
-3. บน GitHub: **Settings → Pages → Source: Deploy from a branch → Branch: main, Folder: /app**
-   (ถ้าเลือกได้เฉพาะ root ให้บอก Claude Code ว่า "ย้าย app ขึ้น root หรือทำ GitHub Action deploy เฉพาะโฟลเดอร์ app")
-4. รอ 1–2 นาที → แอปออนไลน์ที่ `https://<username>.github.io/ora/`
-5. เปิดจากมือถือ → เบราว์เซอร์จะเสนอ "เพิ่มไปยังหน้าจอโฮม" → ได้แอปติดเครื่องเหมือนโหลดจากสโตร์
+- **URL จริง: https://lalynsunt.github.io/ora/**
+- Repo: https://github.com/lalynsunt/ora (public — เอกสารธุรกิจถูก .gitignore ไว้ ไม่ขึ้น GitHub)
+- กลไก: push ขึ้น branch `main` → GitHub Actions (`.github/workflows/pages.yml`) deploy โฟลเดอร์ `app/` อัตโนมัติ (~30 วินาที)
+- เปิดจากมือถือ → เมนูเบราว์เซอร์ → "เพิ่มไปยังหน้าจอโฮม" → ได้แอปติดเครื่องเหมือนโหลดจากสโตร์
 
 ## อัปเดตเวอร์ชันหลังแก้โค้ด
 
