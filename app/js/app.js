@@ -362,6 +362,23 @@
     }
   });
 
+  // ---------- มือถือ: เลื่อนช่องกรอกให้พ้นแป้นพิมพ์เสมอ ----------
+  document.addEventListener("focusin", e => {
+    if (e.target.matches("input, textarea, select")) {
+      // รอแป้นพิมพ์เปิดก่อน แล้วเลื่อนช่องมากลางจอ
+      setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  });
+  if (window.visualViewport) {
+    // จอมองเห็นเปลี่ยนขนาด (แป้นพิมพ์เปิด/ปิด) → เลื่อนช่องที่กำลังพิมพ์กลับมาให้เห็น
+    window.visualViewport.addEventListener("resize", () => {
+      const el = document.activeElement;
+      if (el && el.matches("input, textarea")) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+      }
+    });
+  }
+
   // ---------- PWA ----------
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
