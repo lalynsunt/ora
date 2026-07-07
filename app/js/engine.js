@@ -45,6 +45,7 @@ Engine.buildProfile = function (state) {
     dob, birthPlanet, taksa,
     lifePath: lp,
     zodiac: K.zodiacOf(dob.getMonth() + 1, dob.getDate()),
+    lagna: Engine.lagna(dob, state.birthTime),
     hasTime: hour != null,
     colors: {
       power: K.PLANETS[taksa["เดช"]],   powerPlanet: taksa["เดช"],
@@ -52,6 +53,52 @@ Engine.buildProfile = function (state) {
       avoid: K.PLANETS[taksa["กาลกิณี"]], avoidPlanet: taksa["กาลกิณี"]
     }
   };
+};
+
+// ---------- ราศีแบบไทย (นิรายนะ โดยประมาณ) ----------
+Engine.siderealSign = function (m, d) {
+  const md = m * 100 + d;
+  let sign = "ธนู"; // ก่อน 14 ม.ค. คือธนู (ต่อจากปีก่อน)
+  for (const [bm, bd, name] of K.SIDEREAL_START) {
+    if (md >= bm * 100 + bd) sign = name;
+  }
+  return sign;
+};
+
+// ---------- ลัคนาโดยประมาณ (เรือนชั่วยาม: 06:00 = ราศีสุริยะ, ราศีละ 2 ชม.) ----------
+Engine.lagna = function (dob, birthTimeStr) {
+  if (!birthTimeStr) return null;
+  const [h, mi] = birthTimeStr.split(":").map(Number);
+  const sunSign = Engine.siderealSign(dob.getMonth() + 1, dob.getDate());
+  const baseIdx = K.SIGN_ORDER.indexOf(sunSign);
+  const steps = Math.floor((((h + (mi || 0) / 60) - 6 + 24) % 24) / 2);
+  const name = K.SIGN_ORDER[(baseIdx + steps) % 12];
+  return { name, approx: true };
+};
+
+// ---------- ทักษาเสวยอายุ (รอบ 108 ปี เริ่มจากดาววันเกิด) ----------
+// ตอบ: ตอนนี้อยู่ช่วงดาวไหน โทนดี/ร้าย ถึงอายุเท่าไหร่ ช่วงถัดไปเริ่มปีไหน
+Engine.sawoey = function (profile, date) {
+  const age = (date - profile.dob) / (365.25 * 24 * 3600 * 1000);
+  const idx = K.TAKSA.indexOf(profile.birthPlanet);
+  let start = 0;
+  for (let i = 0; i < 16; i++) {
+    const planet = K.TAKSA[(idx + i) % 8];
+    const yrs = K.SAWOEY_YEARS[planet];
+    if (age < start + yrs) {
+      const position = K.POSITIONS[i % 8];        // ผังทักษาเริ่มที่ดาววันเกิด = บริวาร
+      const nextPlanet = K.TAKSA[(idx + i + 1) % 8];
+      const nextPosition = K.POSITIONS[(i + 1) % 8];
+      return {
+        planet, position, theme: K.SAWOEY_THEME[position],
+        startAge: start, endAge: start + yrs, age: Math.floor(age),
+        nextPlanet, nextPosition, nextTheme: K.SAWOEY_THEME[nextPosition],
+        nextStartYear: profile.dob.getFullYear() + start + yrs
+      };
+    }
+    start += yrs;
+  }
+  return null; // เกิน 108 ปี (ไม่น่าเกิดขึ้น)
 };
 
 // ---------- ดวงรายวัน ----------
@@ -87,24 +134,40 @@ Engine.dailyText = function (profile, d) {
   return posLine;
 };
 
-// ---------- วิเคราะห์เบอร์โทร ----------
+// ---------- วิเคราะห์เบอร์โทร (ละเอียด: ทุกคู่เลข + เลขเด่นบอกนิสัยเจ้าของ) ----------
 Engine.phone = function (number) {
   const digits = number.replace(/\D/g, "");
   if (digits.length < 9) return null;
   const sum = digits.split("").reduce((a, b) => a + Number(b), 0);
+
+  // วิเคราะห์ทุกคู่เลขติดกันทั้งเบอร์ — 4 ตัวท้ายน้ำหนักสองเท่า (ส่วนที่ส่งผลสุดตามตำรา)
   const pairs = [];
-  // วิเคราะห์คู่เลข 4 ตัวท้าย (ส่วนที่ถือว่ามีอิทธิพลสุดตามตำราเบอร์)
-  const tail = digits.slice(-4);
-  for (let i = 0; i < 3; i++) {
-    const p = tail.slice(i, i + 2);
+  for (let i = 0; i < digits.length - 1; i++) {
+    const p = digits.slice(i, i + 2);
+    const inTail = i >= digits.length - 4;
     const info = K.PHONE_PAIRS[p];
-    pairs.push({ pair: p, s: info ? info.s : 0, t: info ? info.t : "คู่เลขพลังกลางๆ ไม่ส่งเสริมไม่ฉุดรั้ง" });
+    let s, t;
+    if (info) { s = info.s; t = info.t; }
+    else {
+      const a = K.DIGIT[p[0]], b = K.DIGIT[p[1]];
+      s = 0;
+      t = `พลัง${a.t} (${a.p}) ผสม ${b.t} (${b.p}) — โทนกลาง เสริมกันตามบริบทการใช้`;
+    }
+    pairs.push({ pair: p, s, t, w: inTail ? 2 : 1 });
   }
-  const pairScore = pairs.reduce((a, p) => a + p.s, 0); // -3..+6
+  const weighted = pairs.reduce((acc, p) => acc + p.s * p.w, 0);   // ช่วงโดยประมาณ -20..+28
   const sumGood = K.PHONE_SUM_GOOD[sum];
-  let score = 5 + pairScore + (sumGood ? 2 : 0);
+  let score = Math.round(5.5 + weighted * 0.35 + (sumGood ? 1 : 0));
   score = Math.max(2, Math.min(10, score));
-  return { digits, sum, sumGood: sumGood || null, pairs, score };
+
+  // เลขเด่น (ปรากฏบ่อยสุด) = พลังประจำตัวเจ้าของเบอร์
+  const freq = {};
+  for (const d of digits) freq[d] = (freq[d] || 0) + 1;
+  let topDigit = digits[0];
+  for (const d in freq) if (freq[d] > freq[topDigit]) topDigit = d;
+  const dominant = freq[topDigit] >= 2 ? { d: topDigit, n: freq[topDigit], info: K.DIGIT[topDigit] } : null;
+
+  return { digits, sum, sumGood: sumGood || null, pairs, score, dominant };
 };
 
 // ---------- ทาโรต์ ----------
@@ -145,22 +208,52 @@ Engine.safetyCheck = function (text) {
 };
 
 // ---------- คำตอบ rule-based สำหรับ "ถามดวง" (fallback ไม่มี AI) ----------
+// หลัก: พื้นดวง (วันเกิด+ราศี+เลขชีวิต) → จังหวะชีวิต (เสวยอายุ) → เจาะหมวด (ผังทักษา) → action
 Engine.ruleAnswer = function (profile, category, question) {
   const today = new Date();
   const d = Engine.daily(profile, today);
-  const cards = Engine.tarotDraw(1, question + d.dateStr);
-  const c = cards[0];
+  const sw = Engine.sawoey(profile, today);
   const lp = K.LIFEPATH[profile.lifePath];
+  const day = K.DAY_TRAITS[profile.birthPlanet];
+  const z = profile.zodiac;
+
+  // เจาะหมวด: ดูดาวประจำตำแหน่งทักษาที่เกี่ยวกับเรื่องนั้น
+  const domainMap = {
+    "ความรัก":   { pos: "ศรี",    label: "เสน่ห์-ความรัก" },
+    "การเงิน":   { pos: "ศรี",    label: "โชคลาภการเงิน" },
+    "การงาน":   { pos: "เดช",    label: "อำนาจการงาน" },
+    "ครอบครัว": { pos: "บริวาร", label: "คนรอบตัว-ครอบครัว" },
+    "การเรียน":  { pos: "มนตรี",  label: "ผู้สนับสนุน-วิชาความรู้" },
+    "ภาพรวมชีวิต": { pos: "อายุ", label: "ตัวตน-พื้นชีวิต" }
+  };
+  const dm = domainMap[category] || domainMap["ภาพรวมชีวิต"];
+  const domPlanet = profile.taksa[dm.pos];
+  const domColor = K.PLANETS[domPlanet].color;
+
+  // จังหวะปี: โทนช่วงเสวยอายุ + จะเปลี่ยนเมื่อไหร่
+  const yearLine = sw
+    ? `ช่วงอายุ ${Math.floor(sw.startAge)}–${Math.floor(sw.endAge)} ปี คุณอยู่ใน "${sw.theme.t}" (ดาว${sw.planet}เสวยอายุ ตำแหน่ง${sw.position}) โทนช่วงนี้: **${sw.theme.g}** — ${sw.theme.d}\n\nช่วงถัดไปเริ่มราวปี ${sw.nextStartYear + 543} (พ.ศ.) อายุ ${Math.floor(sw.endAge)} ปี จะเข้า "${sw.nextTheme.t}" โทน${sw.nextTheme.g}`
+    : "";
+
   return [
-    `🔮 **ภาพรวมของเรื่องนี้**`,
-    `จากผังวันเกิด: คุณเป็น${lp.t} (เลขชีวิต ${profile.lifePath}) — ${Engine.dailyText(profile, d)}`,
+    `🧬 **พื้นดวงของคุณ (จากวันเกิดจริง)**`,
+    `คุณเกิดวัน${profile.birthPlanet} — ${day.t}: ${day.d}`,
+    `ราศี${z.n} ธาตุ${z.el} (ดาว${z.ruler}เป็นเจ้าเรือน) จุดแข็งที่พึ่งได้: ${z.str[0]} และ${z.str[1]} · จุดที่ต้องรู้ทันตัวเอง: ${z.weak[0]}`,
+    `เลขชีวิต ${profile.lifePath} — ${lp.t}`,
     ``,
-    `${c.e} **ไพ่ที่เปิดให้กับคำถามนี้: ${c.n} (${c.th})**`,
-    `${c.m}`,
+    `🌊 **จังหวะชีวิตช่วงนี้ (ทักษาเสวยอายุ)**`,
+    yearLine,
     ``,
-    `✅ **คำแนะนำ**: ${c.adv}`,
+    `🔎 **เจาะเรื่อง${category || "ที่ถาม"}**`,
+    `ดาวประจำตำแหน่ง${dm.pos} (${dm.label}) ในดวงคุณคือ **ดาว${domPlanet}** — วันนี้${Engine.dailyText(profile, d)}`,
+    `เคล็ดเสริม: ใช้โทนสี${domColor}ในวันสำคัญของเรื่องนี้ และเลี่ยงสี${profile.colors.avoid.color} (กาลกิณีของคุณ)`,
     ``,
-    `💡 อยากได้คำตอบที่เจาะบริบทของคุณจริงๆ (มีการถามรายละเอียดกลับ) — เปิดโหมด AI ในหน้าตั้งค่า ใช้ Gemini API key ฟรี`,
+    `✅ **คำแนะนำ 3 ข้อ**`,
+    `1. ${sw && sw.theme.g === "ท้าทาย" ? "ช่วงนี้ทำอะไรให้ช้าลงหนึ่งจังหวะ ตรวจเอกสาร-ข้อตกลงซ้ำสองรอบ" : "ใช้จุดแข็ง “" + z.str[0] + "” ของคุณนำในเรื่องนี้"}`,
+    `2. ${day.weak[0]}คือจุดบอดของคนวัน${profile.birthPlanet} — เรื่องนี้ให้ตั้งสติก่อนตอบสนอง`,
+    `3. เขียนสิ่งที่ต้องการจากเรื่องนี้ให้ชัด 1 บรรทัดก่อนนอนคืนนี้ ความชัดของใจคือจุดเริ่มของดวงที่ดี`,
+    ``,
+    `🎴 อยากได้สัญญาณเฉพาะของคำถามนี้ ไปที่แท็บ "ไพ่" เลือกไพ่ด้วยมือคุณเอง แล้วกลับมาเล่าได้เลยค่ะ · หรือเปิด**โหมด AI ฟรี**ในหน้าตั้งค่า พี่หมอจะซักรายละเอียดและตอบเจาะลึกกว่านี้`,
     ``,
     `⚖️ คำทำนายเพื่อการสะท้อนตนเองและความบันเทิง การตัดสินใจสำคัญควรใช้ข้อมูลจริงประกอบ`
   ].join("\n");

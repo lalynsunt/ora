@@ -31,13 +31,19 @@ LLM.SYSTEM = `คุณคือ "พี่หมอโอรา" หมอด�
 // สร้าง FACTS จาก engine (โครงสร้างชัด ให้ LLM ตีความอย่างเดียว)
 LLM.buildFacts = function (profile, extra) {
   const d = Engine.daily(profile, new Date());
+  const sw = Engine.sawoey(profile, new Date());
   const lp = K.LIFEPATH[profile.lifePath];
+  const day = K.DAY_TRAITS[profile.birthPlanet];
+  const z = profile.zodiac;
   const lines = [
     `[FACTS — คำนวณโดยระบบ ห้ามแก้ไข]`,
     `ชื่อผู้ใช้: ${profile.name}`,
-    `วันเกิด: วัน${profile.birthPlanet} | ราศี${profile.zodiac.n} (${profile.zodiac.tr})`,
+    `วันเกิด: วัน${profile.birthPlanet} — ${day.t}: ${day.d} | จุดแข็ง: ${day.str.join(", ")} | จุดอ่อน: ${day.weak.join(", ")} | งานที่เหมาะ: ${day.job}`,
+    `ราศี${z.n} ธาตุ${z.el} (เจ้าเรือน: ดาว${z.ruler}) — จุดแข็ง: ${z.str.join(", ")} | จุดอ่อน: ${z.weak.join(", ")} | เหมาะกับ: ${z.tip}`,
+    profile.lagna ? `ลัคนาโดยประมาณ (เรือนชั่วยามจากเวลาเกิด): ราศี${profile.lagna.name}` : `ลัคนา: ไม่ทราบ (ผู้ใช้ไม่ได้ระบุเวลาเกิด)`,
     `เลขชีวิต (เลขศาสตร์วันเกิด): ${profile.lifePath} — ${lp.t}: ${lp.d}`,
     `สีมงคลประจำตัว: สีอำนาจ(เดช)=${profile.colors.power.color}, สีโชคลาภ(ศรี)=${profile.colors.luck.color}, สีที่ควรเลี่ยง(กาลกิณี)=${profile.colors.avoid.color}`,
+    sw ? `จังหวะชีวิต (ทักษาเสวยอายุ): อายุ ${Math.floor(sw.startAge)}–${Math.floor(sw.endAge)} อยู่ช่วงดาว${sw.planet}เสวยอายุ ตำแหน่ง${sw.position} — ${sw.theme.t} โทน${sw.theme.g}: ${sw.theme.d} | ช่วงถัดไป: ${sw.nextTheme.t} (โทน${sw.nextTheme.g}) เริ่มราวปี พ.ศ. ${sw.nextStartYear + 543}` : ``,
     `ดวงวันนี้ (มหาทักษา): ดาว${d.todayPlanet}อยู่ตำแหน่ง "${d.position}" — ${d.theme.t}: ${d.theme.d}`,
     `คะแนนวันนี้: งาน ${d.scores.งาน}/5, เงิน ${d.scores.เงิน}/5, ความรัก ${d.scores.ความรัก}/5, จิตใจ ${d.scores.จิตใจ}/5`
   ];
@@ -89,6 +95,71 @@ LLM.chat = async function (apiKey, facts, history) {
     } catch (e) { lastErr = e; }
   }
   throw lastErr || new Error("LLM call failed");
+};
+
+// ---------- Gemini Vision: ลายมือ / โหงวเฮ้ง / โทนสีผิว-สไตล์ ----------
+LLM.SCAN_PROMPTS = {
+  palm: `วิเคราะห์ภาพฝ่ามือนี้ตามศาสตร์หัตถศาสตร์ (ลายมือ) อย่างละเอียด:
+1. รูปมือ+นิ้ว → ธาตุประจำมือ (ดิน/ลม/ไฟ/น้ำ) และนิสัยพื้นฐาน
+2. เส้นชีวิต: ความยาว-โค้ง-ลึก → พลังชีวิต ความแข็งแรง (ห้ามทำนายอายุขัย)
+3. เส้นสมอง: ความยาว-ทิศทาง → วิธีคิด ตัดสินใจ
+4. เส้นหัวใจ: จุดเริ่ม-ปลายเส้น → นิสัยความรัก การแสดงออกทางใจ
+5. เส้นวาสนา (ถ้าเห็น): ความชัด → เส้นทางการงาน-ความมั่นคง ช่วงชีวิตที่เด่น
+6. เนิน/จุดพิเศษที่สังเกตเห็น
+สรุป: จุดแข็ง 3 ข้อ, สิ่งที่ควรพัฒนา 2 ข้อ (โทนบวก), คำแนะนำเชื่อมโยงกับ FACTS ดวงพื้นฐาน
+ถ้าภาพไม่ใช่ฝ่ามือหรือไม่ชัดพอ ให้บอกตรงๆ และแนะวิธีถ่ายใหม่ (กางฝ่ามือ แสงสว่าง ถ่ายตรง) ห้ามเดา`,
+  face: `วิเคราะห์ภาพใบหน้านี้ตามศาสตร์โหงวเฮ้ง อย่างระมัดระวังและสุภาพ:
+1. สามส่วนใบหน้า (บน=หน้าผาก/วัยเยาว์-สติปัญญา, กลาง=คิ้วตาจมูก/วัยทำงาน-ทรัพย์, ล่าง=ปากคาง/บั้นปลาย-ความมั่นคง) — ส่วนไหนเด่น หมายถึงอะไร
+2. หน้าผาก คิ้ว ดวงตา จมูก ปาก คาง — จุดเด่นเชิงโหงวเฮ้งทีละจุด
+3. ระบุรูปหน้า (รูปไข่/กลม/เหลี่ยม/ยาว/หัวใจ) → แนะนำทรงผมเสริมโหงวเฮ้งตามรูปหน้า
+สรุป: เสน่ห์เด่น 3 ข้อ, วิธีเสริมโหงวเฮ้งด้วยบุคลิก-ทรงผม-รอยยิ้ม (ทำได้จริง), เชื่อมโยงกับ FACTS
+กติกาเข้มพิเศษ: ทุกการตีความต้องเป็นกลางหรือบวกเท่านั้น ห้ามตัดสินสวย-ไม่สวย ห้ามพูดถึงน้ำหนัก สีผิวเชิงลบ อายุ หรือตำหนิใดๆ ถ้าภาพไม่ใช่ใบหน้าตรงๆ หรือมืดเกิน ให้ขอถ่ายใหม่อย่างสุภาพ`,
+  style: `วิเคราะห์ภาพนี้เพื่อทำ Seasonal Color Analysis (วิเคราะห์โทนสีประจำตัว):
+1. ประเมิน undertone ผิวจากภาพ: Warm (เหลืองทอง) หรือ Cool (ชมพูอมฟ้า) + ระดับความสว่าง-ความคมชัดของสีผม/ตา/ผิวโดยรวม
+2. สรุปเป็น Season: Spring (warm สว่าง) / Summer (cool อ่อนโยน) / Autumn (warm ลึก) / Winter (cool คมชัด) — อธิบายเหตุผล
+3. แนะนำ: สีเสื้อผ้าที่เหมาะ 5-6 สี, สีที่ควรเลี่ยง 2-3 สี, โทนเมคอัพ, สีเครื่องประดับ (ทอง/เงิน)
+4. สำคัญที่สุด: ผสมผลนี้กับสีมงคลใน FACTS (เดช/ศรี) → เลือกสีที่ "ทั้งถูกโฉลกดวงและถูกโทนผิว" แนะนำชุดไปทำงาน 1 ชุด + ออกเดท 1 ชุด
+5. ถ้าเห็นใบหน้า: ระบุรูปหน้า → ทรงผมที่เสริมทั้งบุคลิกและดวง
+หมายเหตุท้ายคำตอบ: บอกว่าการประเมินจากภาพถ่ายมีผลจากแสง อาจคลาดเคลื่อน ควรลองเทียบผ้าจริงใต้แสงธรรมชาติ
+ถ้าภาพมืด/ติดฟิลเตอร์จัด ให้ขอภาพใหม่ใต้แสงธรรมชาติ ไม่แต่งฟิลเตอร์`
+};
+
+// เรียก Gemini พร้อมรูปภาพ (รูปส่งตรงจากเครื่องผู้ใช้ → Google เท่านั้น ไม่ผ่าน/ไม่เก็บที่อื่น)
+LLM.vision = async function (apiKey, kind, base64Data, mimeType, facts) {
+  const prompt = LLM.SCAN_PROMPTS[kind];
+  const contents = [{
+    role: "user",
+    parts: [
+      { text: facts + "\n\n" + prompt },
+      { inline_data: { mime_type: mimeType, data: base64Data } }
+    ]
+  }];
+  let lastErr = null;
+  for (const model of LLM.MODELS) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: LLM.SYSTEM }] },
+            contents,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1600 }
+          })
+        }
+      );
+      if (!res.ok) { lastErr = new Error("HTTP " + res.status); continue; }
+      const data = await res.json();
+      const text = data && data.candidates && data.candidates[0] &&
+        data.candidates[0].content && data.candidates[0].content.parts
+        ? data.candidates[0].content.parts.map(p => p.text || "").join("")
+        : null;
+      if (text) return LLM.outputFilter(text);
+      lastErr = new Error("empty response");
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("vision call failed");
 };
 
 // safety ชั้นสุดท้ายฝั่ง client — กรองคำต้องห้ามที่อาจหลุดมา

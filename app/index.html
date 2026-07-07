@@ -65,6 +65,34 @@
   <div id="tarot-content"></div>
 </section>
 
+<!-- ============ สแกน: ลายมือ / โหงวเฮ้ง / โทนสี ============ -->
+<section id="scr-scan" class="screen hidden">
+  <header class="top"><span class="logo-sm">🔮 ศาสตร์จากภาพ</span></header>
+  <div id="scan-gate" class="card hidden">
+    <h3>ฟีเจอร์นี้ใช้โหมด AI</h3>
+    <p class="hint">การอ่านลายมือ โหงวเฮ้ง และวิเคราะห์โทนสีผิว ต้องใช้ AI วิเคราะห์ภาพ — เปิดใช้ฟรีโดยใส่ Gemini API key ในหน้าตั้งค่า (กดขอ key ฟรีได้ที่ aistudio.google.com/apikey)</p>
+    <button id="scan-goto-set" class="btn-primary">ไปหน้าตั้งค่า</button>
+  </div>
+  <div id="scan-main">
+    <div class="chips scan-kinds">
+      <button class="chip sel" data-kind="palm">🖐️ ลายมือ</button>
+      <button class="chip" data-kind="face">👤 โหงวเฮ้ง</button>
+      <button class="chip" data-kind="style">👗 โทนสี-สไตล์</button>
+    </div>
+    <div class="card">
+      <p id="scan-desc" class="list-line"></p>
+      <input id="scan-file" type="file" accept="image/*" class="hidden">
+      <button id="scan-pick" class="btn-primary">📷 ถ่ายรูป / เลือกรูป</button>
+      <div id="scan-preview-wrap" class="hidden">
+        <img id="scan-preview" alt="ภาพที่เลือก">
+        <button id="scan-go" class="btn-primary">✨ ให้พี่หมอวิเคราะห์</button>
+      </div>
+      <p class="disclaimer">ภาพถูกย่อในเครื่องคุณและส่งตรงไปยัง Google Gemini เพื่อวิเคราะห์เท่านั้น — แอปไม่บันทึกหรือส่งภาพไปที่อื่น วิเคราะห์เสร็จภาพไม่ถูกเก็บ</p>
+    </div>
+    <div id="scan-result"></div>
+  </div>
+</section>
+
 <!-- ============ ตัวเลข ============ -->
 <section id="scr-num" class="screen hidden">
   <header class="top"><span class="logo-sm">🔢 ศาสตร์ตัวเลข</span></header>
@@ -125,6 +153,7 @@
   <button data-scr="home" class="active"><span>🌅</span>วันนี้</button>
   <button data-scr="ask"><span>💬</span>ถามดวง</button>
   <button data-scr="tarot"><span>🎴</span>ไพ่</button>
+  <button data-scr="scan"><span>🔮</span>สแกน</button>
   <button data-scr="num"><span>🔢</span>ตัวเลข</button>
   <button data-scr="set"><span>⚙️</span>ตั้งค่า</button>
 </nav>

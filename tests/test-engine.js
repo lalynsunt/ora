@@ -45,7 +45,7 @@ check("daily มี position", K.POSITIONS.includes(a.position), a.position);
 
 // 4) เบอร์โทร
 const ph = Engine.phone("0812345424");
-check("phone ok", ph && ph.pairs.length === 3 && ph.score >= 2 && ph.score <= 10);
+check("phone ok", ph && ph.pairs.length === 9 && ph.score >= 2 && ph.score <= 10);
 check("phone สั้นเกิน = null", Engine.phone("081") === null);
 check("phone รับขีดคั่นได้", Engine.phone("081-234-5424").digits === "0812345424");
 
@@ -77,6 +77,47 @@ for (const bp of K.TAKSA) {
   const t = K.taksaOf(bp);
   check("taksa ครบ (" + bp + ")", Object.keys(t).length === 8 && K.PLANETS[t["กาลกิณี"]] != null);
 }
+
+// 9) ทักษาเสวยอายุ
+check("SAWOEY_YEARS รวม 108 ปี", Object.values(K.SAWOEY_YEARS).reduce((a, b) => a + b, 0) === 108);
+const sw = Engine.sawoey(p, new Date("2026-07-07T12:00:00")); // เกิด 1995 อายุ ~31
+check("sawoey มีผล", sw != null && K.TAKSA.includes(sw.planet));
+check("sawoey ตำแหน่งถูกต้อง", K.POSITIONS.includes(sw.position));
+check("sawoey อายุอยู่ในช่วง", sw.age >= Math.floor(sw.startAge) && sw.age < Math.ceil(sw.endAge), JSON.stringify({ age: sw.age, s: sw.startAge, e: sw.endAge }));
+check("sawoey มี theme+next", sw.theme && sw.nextTheme && sw.nextStartYear > 2000);
+// เด็กแรกเกิด: ช่วงแรกต้องเป็นดาววันเกิด (บริวาร)
+const baby = Engine.buildProfile({ dob: "2026-01-01" });
+const swBaby = Engine.sawoey(baby, new Date("2026-07-07T12:00:00"));
+check("sawoey แรกเกิด = ดาววันเกิด ตำแหน่งบริวาร", swBaby.planet === baby.birthPlanet && swBaby.position === "บริวาร");
+
+// 10) ลัคนา
+check("lagna ไม่มีเวลาเกิด = null", Engine.lagna(new Date("1995-03-15T12:00:00"), null) === null);
+const lg = Engine.lagna(new Date("1995-03-15T12:00:00"), "06:30");
+check("lagna 06:30 = ราศีสุริยะ (มีน แบบไทยประมาณ)", lg && lg.name === "มีน", lg && lg.name);
+const lg2 = Engine.lagna(new Date("1995-03-15T12:00:00"), "08:30");
+check("lagna +2ชม. = ขยับ 1 ราศี", lg2 && lg2.name === "เมษ", lg2 && lg2.name);
+check("profile มี lagna เมื่อมีเวลาเกิด", p.lagna && K.SIGN_ORDER.includes(p.lagna.name));
+
+// 11) เบอร์แบบละเอียด
+const ph3 = Engine.phone("0899515424");
+check("phone วิเคราะห์ทุกคู่ (10 หลัก = 9 คู่)", ph3.pairs.length === 9, ph3.pairs.length);
+check("phone ท้าย 4 ตัวน้ำหนัก x2", ph3.pairs.filter(x => x.w === 2).length === 3);
+check("phone มีเลขเด่น", ph3.dominant && ph3.dominant.info && ph3.dominant.info.p);
+check("DIGIT ครบ 0-9", Object.keys(K.DIGIT).length === 10);
+
+// 12) knowledge ใหม่ครบ
+check("DAY_TRAITS ครบ 8 ดาว", K.TAKSA.every(pl => K.DAY_TRAITS[pl] && K.DAY_TRAITS[pl].str.length === 3));
+check("ZODIAC ละเอียดครบ 12", K.ZODIAC.every(z => z.el && z.ruler && z.str.length === 3 && z.weak.length === 2 && z.tip));
+check("SAWOEY_THEME ครบ 8 ตำแหน่ง", K.POSITIONS.every(pos => K.SAWOEY_THEME[pos] && K.SAWOEY_THEME[pos].g));
+check("SEASONS ครบ 4", Object.keys(K.SEASONS).length === 4);
+check("ROMAN ครบ 22", K.ROMAN.length === 22);
+
+// 13) ruleAnswer ใหม่ต้องลึกและไม่แกล้งเปิดไพ่
+const ans2 = Engine.ruleAnswer(p, "การเงิน", "การเงินปีนี้เป็นอย่างไร");
+check("ruleAnswer มีพื้นดวง", ans2.includes("พื้นดวง") && ans2.includes("ราศี"));
+check("ruleAnswer มีเสวยอายุ", ans2.includes("เสวยอายุ"));
+check("ruleAnswer ไม่แกล้งเปิดไพ่", !ans2.includes("ไพ่ที่เปิดให้กับคำถามนี้"));
+check("ruleAnswer ยาวพอ (ลึกขึ้น)", ans2.length > 900, ans2.length);
 
 console.log(fail === 0 ? "\n=== ALL TESTS PASSED ===" : "\n=== " + fail + " FAILED ===");
 process.exit(fail ? 1 : 0);
