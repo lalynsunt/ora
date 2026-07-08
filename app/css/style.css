@@ -7,7 +7,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+html { height: 100%; }
+body { min-height: 100%; } /* ห้าม fix height — ไม่งั้น padding ล่างไม่ต่อท้ายเนื้อหา */
 body {
   font-family: "Anuphan", system-ui, sans-serif;
   background: radial-gradient(ellipse at 20% -10%, #3d2470 0%, transparent 55%),
@@ -16,7 +17,7 @@ body {
   background-attachment: fixed;
   color: var(--text); min-height: 100vh;
   max-width: 520px; margin: 0 auto;
-  padding-bottom: 84px;
+  padding-bottom: 132px; /* เผื่อพ้นแถบเมนูล่าง — ปุ่มท้ายหน้าต้องกดได้เสมอ */
   position: relative;
 }
 /* ดาวระยิบบนฟ้า — เพิ่มมิติความขลัง */

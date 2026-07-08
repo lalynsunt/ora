@@ -292,10 +292,78 @@
     if (tarotPicked.length === 3) revealTarot();
   }
 
+  // ---------- ภาพไพ่ AI (Nano Banana) + cache ในเครื่อง ----------
+  const TIMG_KEY = i => "ora_tarot_img_v1_" + i;
+  function getTarotImg(idx) { try { return localStorage.getItem(TIMG_KEY(idx)); } catch (e) { return null; } }
+
+  // ย่อภาพที่ generate มาให้เล็กพอเก็บ localStorage (~40-80KB/ใบ)
+  function shrinkDataURL(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const W = 320, H = 512;
+        const cv = document.createElement("canvas");
+        cv.width = W; cv.height = H;
+        const ctx = cv.getContext("2d");
+        const s = Math.max(W / img.width, H / img.height); // cover-crop
+        const dw = img.width * s, dh = img.height * s;
+        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        resolve(cv.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  function tarotImgPrompt(card) {
+    return `Vintage Art Nouveau tarot card illustration: "${card.n}" from the major arcana. ` +
+      `Alphonse Mucha style, ornate flowing linework, muted gold, deep purple and ivory parchment palette, ` +
+      `mystical celestial atmosphere with delicate stars, elegant symbolic composition representing: ${card.m}. ` +
+      `Portrait orientation 2:3. Full-bleed artwork only — absolutely NO text, NO letters, NO numbers, NO border frame.`;
+  }
+
+  // สร้างภาพไพ่ทีละใบ (เรียงคิว กันชนโควตา) แล้วอัปเดตการ์ดบนจอ
+  async function genTarotImages(cards) {
+    if (!state.apiKey) return;
+    for (const card of cards) {
+      const idx = K.TAROT.indexOf(card);
+      if (getTarotImg(idx)) continue;
+      try {
+        const raw = await LLM.genImage(state.apiKey, tarotImgPrompt(card));
+        const small = await shrinkDataURL(raw);
+        try { localStorage.setItem(TIMG_KEY(idx), small); } catch (e) { /* เต็ม — ใช้ครั้งนี้เฉยๆ */ }
+        const wrap = document.querySelector(`.tface-wrap[data-idx="${idx}"]`);
+        if (wrap) wrap.innerHTML = tarotSVG(card, small);
+      } catch (e) { /* สร้างไม่ได้ — คง SVG เดิมไว้ */ }
+    }
+  }
+
   // หน้าไพ่ SVG สไตล์ Art Nouveau วินเทจ — พื้นงาช้าง ซุ้มโค้ง ลายเถาทอง เลขโรมัน
-  function tarotSVG(card) {
+  // ถ้ามีภาพ AI (imgHref) จะแสดงภาพในซุ้มแทนสัญลักษณ์
+  function tarotSVG(card, imgHref) {
     const idx = K.TAROT.indexOf(card);
     const roman = K.ROMAN[idx] || "";
+    const arch = "M 26 78 Q 26 48 56 43 Q 110 30 164 43 Q 194 48 194 78 L 194 290 L 26 290 Z";
+    const artwork = imgHref
+      ? `<clipPath id="tclip${idx}"><path d="${arch}"/></clipPath>
+         <image href="${imgHref}" x="26" y="30" width="168" height="260" preserveAspectRatio="xMidYMid slice" clip-path="url(#tclip${idx})"/>
+         <path d="${arch}" fill="none" stroke="#a3812f" stroke-width="2.5"/>`
+      : `<circle cx="55" cy="95" r="1.4" fill="#e6c36b" opacity="0.9"/>
+         <circle cx="168" cy="88" r="1.1" fill="#fff" opacity="0.8"/>
+         <circle cx="150" cy="245" r="1.3" fill="#b18cff" opacity="0.9"/>
+         <circle cx="68" cy="255" r="1" fill="#e6c36b" opacity="0.8"/>
+         <circle cx="110" cy="72" r="1.2" fill="#fff" opacity="0.7"/>
+         <path d="M 40 96 C 52 130 34 160 46 195 C 54 222 38 252 46 276" fill="none" stroke="#c9a94f" stroke-width="1.2" opacity="0.55"/>
+         <path d="M 180 96 C 168 130 186 160 174 195 C 166 222 182 252 174 276" fill="none" stroke="#c9a94f" stroke-width="1.2" opacity="0.55"/>
+         <circle cx="46" cy="140" r="2" fill="#c9a94f" opacity="0.6"/>
+         <circle cx="174" cy="140" r="2" fill="#c9a94f" opacity="0.6"/>
+         <circle cx="42" cy="230" r="2" fill="#c9a94f" opacity="0.6"/>
+         <circle cx="178" cy="230" r="2" fill="#c9a94f" opacity="0.6"/>
+         <circle cx="110" cy="168" r="58" fill="rgba(230,195,107,0.09)" stroke="#e6c36b" stroke-width="1" opacity="0.9"/>
+         <circle cx="110" cy="168" r="68" fill="none" stroke="#e6c36b" stroke-width="0.8" opacity="0.4" stroke-dasharray="2 6"/>
+         <text x="110" y="112" text-anchor="middle" fill="#e6c36b" font-size="9" opacity="0.85" letter-spacing="4">✦ ✧ ✦</text>
+         <text x="110" y="190" text-anchor="middle" font-size="62">${card.e}</text>
+         <text x="110" y="268" text-anchor="middle" fill="#e6c36b" font-size="9" opacity="0.85" letter-spacing="4">✧ ✦ ✧</text>`;
     return `<svg viewBox="0 0 220 360" xmlns="http://www.w3.org/2000/svg" class="tface">
       <defs>
         <radialGradient id="tsky${idx}" cx="50%" cy="30%" r="90%">
@@ -312,31 +380,11 @@
       <text x="110" y="33" text-anchor="middle" fill="#6d5218" font-size="19" font-family="Georgia,serif" letter-spacing="3">${roman}</text>
       <text x="58" y="31" text-anchor="middle" fill="#b3924a" font-size="10">✦</text>
       <text x="162" y="31" text-anchor="middle" fill="#b3924a" font-size="10">✦</text>
-      <!-- ซุ้มภาพโค้งแบบนูโว -->
-      <path d="M 26 78 Q 26 48 56 43 Q 110 30 164 43 Q 194 48 194 78 L 194 290 L 26 290 Z"
-            fill="url(#tsky${idx})" stroke="#a3812f" stroke-width="2.5"/>
+      <!-- ซุ้มภาพโค้งแบบนูโว: พื้นม่วง + ภาพ AI (ถ้ามี) หรือลายสัญลักษณ์ -->
+      <path d="${arch}" fill="url(#tsky${idx})" stroke="#a3812f" stroke-width="2.5"/>
+      ${artwork}
       <path d="M 32 80 Q 32 54 58 49 Q 110 37 162 49 Q 188 54 188 80 L 188 284 L 32 284 Z"
             fill="none" stroke="#e6c36b" stroke-width="0.8" opacity="0.5"/>
-      <!-- ดาวประดับในภาพ -->
-      <circle cx="55" cy="95" r="1.4" fill="#e6c36b" opacity="0.9"/>
-      <circle cx="168" cy="88" r="1.1" fill="#fff" opacity="0.8"/>
-      <circle cx="150" cy="245" r="1.3" fill="#b18cff" opacity="0.9"/>
-      <circle cx="68" cy="255" r="1" fill="#e6c36b" opacity="0.8"/>
-      <circle cx="110" cy="72" r="1.2" fill="#fff" opacity="0.7"/>
-      <!-- ลายเถาไม้เลื้อยสองข้าง -->
-      <path d="M 40 96 C 52 130 34 160 46 195 C 54 222 38 252 46 276" fill="none" stroke="#c9a94f" stroke-width="1.2" opacity="0.55"/>
-      <path d="M 180 96 C 168 130 186 160 174 195 C 166 222 182 252 174 276" fill="none" stroke="#c9a94f" stroke-width="1.2" opacity="0.55"/>
-      <circle cx="46" cy="140" r="2" fill="#c9a94f" opacity="0.6"/>
-      <circle cx="174" cy="140" r="2" fill="#c9a94f" opacity="0.6"/>
-      <circle cx="42" cy="230" r="2" fill="#c9a94f" opacity="0.6"/>
-      <circle cx="178" cy="230" r="2" fill="#c9a94f" opacity="0.6"/>
-      <!-- รัศมีหลังสัญลักษณ์ -->
-      <circle cx="110" cy="168" r="58" fill="rgba(230,195,107,0.09)" stroke="#e6c36b" stroke-width="1" opacity="0.9"/>
-      <circle cx="110" cy="168" r="68" fill="none" stroke="#e6c36b" stroke-width="0.8" opacity="0.4" stroke-dasharray="2 6"/>
-      <text x="110" y="112" text-anchor="middle" fill="#e6c36b" font-size="9" opacity="0.85" letter-spacing="4">✦ ✧ ✦</text>
-      <!-- สัญลักษณ์ประจำไพ่ -->
-      <text x="110" y="190" text-anchor="middle" font-size="62">${card.e}</text>
-      <text x="110" y="268" text-anchor="middle" fill="#e6c36b" font-size="9" opacity="0.85" letter-spacing="4">✧ ✦ ✧</text>
       <!-- ชื่อไพ่บนพื้นงาช้าง -->
       <text x="110" y="315" text-anchor="middle" fill="#4a3510" font-size="15" font-weight="bold" font-family="Anuphan,sans-serif">${esc(card.th)}</text>
       <text x="110" y="338" text-anchor="middle" fill="#6d5218" font-size="11" font-family="Georgia,serif" letter-spacing="2">· ${esc(card.n.toUpperCase())} ·</text>
@@ -354,7 +402,11 @@
     const cards = Engine.tarotDraw(3, seed);
     const labels = ["อดีต / รากของเรื่อง", "ปัจจุบัน", "แนวโน้มข้างหน้า"];
     let html = `<div class="card"><h3>🎴 ไพ่ของคุณ</h3>
-      <div class="tface-row">${cards.map(c => `<div class="tface-wrap">${tarotSVG(c)}</div>`).join("")}</div>` +
+      <div class="tface-row">${cards.map(c => {
+        const ci = K.TAROT.indexOf(c);
+        return `<div class="tface-wrap" data-idx="${ci}">${tarotSVG(c, getTarotImg(ci))}</div>`;
+      }).join("")}</div>
+      ${state.apiKey && cards.some(c => !getTarotImg(K.TAROT.indexOf(c))) ? `<p class="hint center">🎨 กำลังวาดภาพไพ่ของคุณด้วย AI... (ภาพจะค่อยๆ ปรากฏ ใช้ครั้งแรกครั้งเดียว)</p>` : ""}` +
       cards.map((c, i) => `
         <div class="tres">
           <div class="tname">${esc(labels[i])} — ${c.e} ${esc(c.n)} (${esc(c.th)})</div>
@@ -365,6 +417,7 @@
        <p class="hint center" style="margin-top:10px">ผลไพ่ตรงใจแค่ไหน?</p>${fbWidget("tarot")}</div>`;
     $("tarot-result").innerHTML = html;
     $("tarot-result").scrollIntoView({ behavior: "smooth" });
+    genTarotImages(cards); // วาดภาพไพ่เบื้องหลัง (ถ้ามี key และยังไม่เคยวาดใบนั้น)
 
     if (state.apiKey) {
       $("tarot-ai").innerHTML = `<p class="hint">🤖 พี่หมอโอรากำลังตีความไพ่ทั้งสามใบร่วมกับดวงของคุณ...</p>`;
