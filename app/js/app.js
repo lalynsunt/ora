@@ -292,9 +292,19 @@
     if (tarotPicked.length === 3) revealTarot();
   }
 
-  // ---------- ภาพไพ่ AI (Nano Banana) + cache ในเครื่อง ----------
+  // ---------- ภาพไพ่ ----------
+  // ลำดับการหา: 1) รูปถาวรใน assets/tarot/ (สร้างจากบัญชี Gemini ที่จ่ายเงิน ฝังในแอป)
+  //             2) cache ที่เคย generate ในเครื่อง  3) generate ด้วย key ผู้ใช้  4) SVG
+  const TAROT_ASSET = i => "assets/tarot/" + String(i).padStart(2, "0") + ".jpg";
   const TIMG_KEY = i => "ora_tarot_img_v1_" + i;
   function getTarotImg(idx) { try { return localStorage.getItem(TIMG_KEY(idx)); } catch (e) { return null; } }
+  // ตรวจว่ามีรูปถาวรไหม (โหลดจริงเพื่อกัน 404) แล้ว callback ด้วย path หรือ null
+  function probeAsset(idx, cb) {
+    const im = new Image();
+    im.onload = () => cb(TAROT_ASSET(idx));
+    im.onerror = () => cb(null);
+    im.src = TAROT_ASSET(idx);
+  }
 
   // ย่อภาพที่ generate มาให้เล็กพอเก็บ localStorage (~40-80KB/ใบ)
   function shrinkDataURL(dataUrl) {
@@ -322,9 +332,25 @@
       `Portrait orientation 2:3. Full-bleed artwork only — absolutely NO text, NO letters, NO numbers, NO border frame.`;
   }
 
-  // สร้างภาพไพ่ทีละใบ (เรียงคิว กันชนโควตา) แล้วอัปเดตการ์ดบนจอ
+  // อัปเดตการ์ดบนจอ: รูปถาวร → cache → generate (ทีละใบ กันชนโควตา) → คง SVG
+  function upgradeTarotFaces(cards) {
+    const needGen = [];
+    let pending = cards.length;
+    cards.forEach(card => {
+      const idx = K.TAROT.indexOf(card);
+      probeAsset(idx, path => {
+        if (path) {
+          const wrap = document.querySelector(`.tface-wrap[data-idx="${idx}"]`);
+          if (wrap) wrap.innerHTML = tarotSVG(card, path);
+        } else if (!getTarotImg(idx)) {
+          needGen.push(card);
+        }
+        if (--pending === 0 && needGen.length && state.apiKey) genTarotImages(needGen);
+      });
+    });
+  }
+
   async function genTarotImages(cards) {
-    if (!state.apiKey) return;
     for (const card of cards) {
       const idx = K.TAROT.indexOf(card);
       if (getTarotImg(idx)) continue;
@@ -417,7 +443,7 @@
        <p class="hint center" style="margin-top:10px">ผลไพ่ตรงใจแค่ไหน?</p>${fbWidget("tarot")}</div>`;
     $("tarot-result").innerHTML = html;
     $("tarot-result").scrollIntoView({ behavior: "smooth" });
-    genTarotImages(cards); // วาดภาพไพ่เบื้องหลัง (ถ้ามี key และยังไม่เคยวาดใบนั้น)
+    upgradeTarotFaces(cards); // รูปถาวรในแอป → cache → generate เบื้องหลัง
 
     if (state.apiKey) {
       $("tarot-ai").innerHTML = `<p class="hint">🤖 พี่หมอโอรากำลังตีความไพ่ทั้งสามใบร่วมกับดวงของคุณ...</p>`;

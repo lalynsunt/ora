@@ -1,5 +1,5 @@
 // ORA service worker — cache static assets (offline daily fortune ยังใช้ได้)
-const CACHE = "ora-v5";
+const CACHE = "ora-v6";
 const ASSETS = ["./", "index.html", "css/style.css", "js/knowledge.js", "js/engine.js", "js/llm.js", "js/app.js", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", e => {
