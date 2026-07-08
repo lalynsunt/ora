@@ -123,15 +123,28 @@ Engine.daily = function (profile, date) {
   const donts = Engine.pick(rng, K.DONT_POOL, 2);
   const affirm = Engine.pick(rng, K.AFFIRM, 1)[0];
   const overall = clamp(Math.round((scores.งาน + scores.เงิน + scores.ความรัก + scores.จิตใจ) / 4));
-  return { dateStr: dstr, todayPlanet, position, theme, scores, overall, dos, donts, affirm };
+  // สีนำโชคของวันนี้ = สีดาวที่ปกครองวันนี้ (แยกจากสีประจำตัว/เดช-ศรี-กาลกิณี ซึ่งคงที่ทุกวัน)
+  const todayColor = K.PLANETS[todayPlanet];
+  const isAvoidDay = position === "กาลกิณี";
+  return { dateStr: dstr, todayPlanet, position, theme, scores, overall, dos, donts, affirm, todayColor, isAvoidDay };
 };
 
 // ข้อความรายวันแบบ rule-based (ใช้เมื่อไม่มี AI key — และเป็น facts ให้ AI ตอนมี key)
+// หมายเหตุ: facts ที่ป้อนเข้า LLM (LLM.buildFacts) ยังคงเป็นภาษาไทยเสมอโดยตั้งใจ (ดาต้าดิบ)
+// ส่วนนี้ (Engine.dailyText) คือข้อความที่ผู้ใช้ "เห็นตรงๆ" ในโหมดตำรา จึงต้อง localize
 Engine.dailyText = function (profile, d) {
-  const posLine = d.position === "กาลกิณี"
-    ? `วันนี้ดาว${d.todayPlanet}เป็นกาลกิณีในผังดวงของคุณ — ไม่ใช่วันร้าย แต่เป็นวันที่ควรใช้สติมากกว่าความเร็ว ${d.theme.d}`
-    : `วันนี้ดาว${d.todayPlanet}สถิตตำแหน่ง "${d.position}" ของคุณ — ${d.theme.t}: ${d.theme.d}`;
-  return posLine;
+  const planet = K.planetName(d.todayPlanet);
+  const themeD = K.L(d.theme, "d");
+  const themeT = K.L(d.theme, "t");
+  const en = typeof I18N !== "undefined" && I18N.lang === "en";
+  if (d.position === "กาลกิณี") {
+    return en
+      ? `Today's ruling planet ${planet} lands on your challenge (กาลกิณี) day — not a bad day, just one that calls for mindfulness over speed. ${themeD}`
+      : `วันนี้ดาว${planet}เป็นกาลกิณีในผังดวงของคุณ — ไม่ใช่วันร้าย แต่เป็นวันที่ควรใช้สติมากกว่าความเร็ว ${themeD}`;
+  }
+  return en
+    ? `Today's ruling planet ${planet} sits in your "${K.positionName(d.position)}" position — ${themeT}: ${themeD}`
+    : `วันนี้ดาว${planet}สถิตตำแหน่ง "${d.position}" ของคุณ — ${themeT}: ${themeD}`;
 };
 
 // ---------- วิเคราะห์เบอร์โทร (ละเอียด: ทุกคู่เลข + เลขเด่นบอกนิสัยเจ้าของ) ----------
@@ -249,32 +262,54 @@ Engine.ruleAnswer = function (profile, category, question) {
   const dm = domainMap[category] || domainMap["ภาพรวมชีวิต"];
   const domPlanet = profile.taksa[dm.pos];
   const domColor = K.PLANETS[domPlanet].color;
+  const domTheme = K.POSITION_THEME[dm.pos];
 
   // จังหวะปี: โทนช่วงเสวยอายุ + จะเปลี่ยนเมื่อไหร่
   const yearLine = sw
-    ? `ช่วงอายุ ${Math.floor(sw.startAge)}–${Math.floor(sw.endAge)} ปี คุณอยู่ใน "${sw.theme.t}" (ดาว${sw.planet}เสวยอายุ ตำแหน่ง${sw.position}) โทนช่วงนี้: **${sw.theme.g}** — ${sw.theme.d}\n\nช่วงถัดไปเริ่มราวปี ${sw.nextStartYear + 543} (พ.ศ.) อายุ ${Math.floor(sw.endAge)} ปี จะเข้า "${sw.nextTheme.t}" โทน${sw.nextTheme.g}`
+    ? `ช่วงอายุ ${Math.floor(sw.startAge)}–${Math.floor(sw.endAge)} ปี คุณอยู่ใน "${sw.theme.t}" (ดาว${sw.planet}เสวยอายุ ตำแหน่ง${sw.position}) โทนช่วงนี้: **${sw.theme.g}** — ${sw.theme.d}\n\nช่วงถัดไปเริ่มราวปี ${sw.nextStartYear + 543} (พ.ศ.) อายุ ${Math.floor(sw.endAge)} ปี จะเข้า "${sw.nextTheme.t}" โทน${sw.nextTheme.g} — ${sw.nextTheme.d}`
     : "";
+  const isChallenge = sw && sw.theme.gradeKey === "challenge";
+
+  // เช็คว่าพื้นดวง (นิสัยวันเกิด) กับจังหวะเสวยอายุ ชี้ไปทางเดียวกันไหม (สร้าง consistency signal เบาๆ)
+  const agree = sw && (sw.theme.gradeKey === "great" || sw.theme.gradeKey === "good");
 
   return [
     `🧬 **พื้นดวงของคุณ (จากวันเกิดจริง)**`,
     `คุณเกิดวัน${profile.birthPlanet} — ${day.t}: ${day.d}`,
-    `ราศี${z.n} ธาตุ${z.el} (ดาว${z.ruler}เป็นเจ้าเรือน) จุดแข็งที่พึ่งได้: ${z.str[0]} และ${z.str[1]} · จุดที่ต้องรู้ทันตัวเอง: ${z.weak[0]}`,
-    `เลขชีวิต ${profile.lifePath} — ${lp.t}`,
+    `จุดแข็งประจำตัว: ${day.str.join(" · ")}`,
+    `จุดที่ควรรู้ทันตัวเอง: ${day.weak.join(" · ")}`,
+    `ราศี${z.n} ธาตุ${z.el} (ดาว${z.ruler}เป็นเจ้าเรือน) — ${z.tr}`,
+    `จุดแข็งจากราศี: ${z.str.join(" · ")} · จุดที่ต้องระวัง: ${z.weak.join(" · ")}`,
+    `สายงาน/บริบทที่เสริมดวงคุณ: ${z.tip}`,
+    `เลขชีวิต ${profile.lifePath} — ${lp.t}: ${lp.d}`,
     ``,
     `🌊 **จังหวะชีวิตช่วงนี้ (ทักษาเสวยอายุ)**`,
     yearLine,
+    agree ? `\n✨ สัญญาณที่สอดคล้องกัน: ทั้งพื้นดวงและจังหวะช่วงอายุตอนนี้ชี้ไปทางบวกด้วยกัน — ช่วงนี้เหมาะจะใช้จุดแข็งของคุณอย่างเต็มที่` : ``,
     ``,
     `🔎 **เจาะเรื่อง${category || "ที่ถาม"}**`,
-    `ดาวประจำตำแหน่ง${dm.pos} (${dm.label}) ในดวงคุณคือ **ดาว${domPlanet}** — วันนี้${Engine.dailyText(profile, d)}`,
-    `เคล็ดเสริม: ใช้โทนสี${domColor}ในวันสำคัญของเรื่องนี้ และเลี่ยงสี${profile.colors.avoid.color} (กาลกิณีของคุณ)`,
+    `คำถามของคุณ: "${question}"`,
+    `ดาวประจำตำแหน่ง${dm.pos} (${dm.label}) ในดวงคุณคือ **ดาว${domPlanet}** — ${domTheme.t}: ${domTheme.d}`,
+    `วันนี้${Engine.dailyText(profile, d)}`,
+    `เคล็ดเสริมเรื่องนี้: ใช้โทนสี${domColor}ในวันสำคัญของเรื่องนี้ (นัดหมาย เจรจา ตัดสินใจ) และเลี่ยงสี${profile.colors.avoid.color} (กาลกิณีของคุณ) ในวันที่รู้สึกไม่มั่นใจ`,
     ``,
-    `✅ **คำแนะนำ 3 ข้อ**`,
-    `1. ${sw && sw.theme.g === "ท้าทาย" ? "ช่วงนี้ทำอะไรให้ช้าลงหนึ่งจังหวะ ตรวจเอกสาร-ข้อตกลงซ้ำสองรอบ" : "ใช้จุดแข็ง “" + z.str[0] + "” ของคุณนำในเรื่องนี้"}`,
-    `2. ${day.weak[0]}คือจุดบอดของคนวัน${profile.birthPlanet} — เรื่องนี้ให้ตั้งสติก่อนตอบสนอง`,
-    `3. เขียนสิ่งที่ต้องการจากเรื่องนี้ให้ชัด 1 บรรทัดก่อนนอนคืนนี้ ความชัดของใจคือจุดเริ่มของดวงที่ดี`,
+    `⚠️ **มุมที่ควรระวัง**`,
+    `${day.weak[0]} คือจุดบอดของคนวัน${profile.birthPlanet} โดยเฉพาะเรื่องแบบนี้ — ทางออก: ตั้งสติก่อนตอบสนอง 1 ลมหายใจก่อนเสมอ`,
+    isChallenge ? `ช่วงจังหวะชีวิตตอนนี้เป็นโทนท้าทาย (${sw.theme.t}) — ทำทุกอย่างช้าลงหนึ่งจังหวะ ตรวจเอกสาร-ข้อตกลงซ้ำสองรอบ ก่อนตัดสินใจเรื่องใหญ่ในช่วงนี้` : `จุดที่ต้องระวังจากราศี: ${z.weak[1] || z.weak[0]} — รู้ทันไว้ก่อนจะช่วยได้มาก`,
     ``,
-    `🎴 อยากได้สัญญาณเฉพาะของคำถามนี้ ไปที่แท็บ "ไพ่" เลือกไพ่ด้วยมือคุณเอง แล้วกลับมาเล่าได้เลยค่ะ · หรือเปิด**โหมด AI ฟรี**ในหน้าตั้งค่า พี่หมอจะซักรายละเอียดและตอบเจาะลึกกว่านี้`,
+    `✅ **แผนลงมือทำ**`,
+    `**ทำวันนี้/สัปดาห์นี้:**`,
+    `1. ใช้จุดแข็ง "${z.str[0]}" ของคุณนำในเรื่องนี้ — มันคือทุนที่คุณมีอยู่แล้ว`,
+    `2. เขียนสิ่งที่ต้องการจากเรื่องนี้ให้ชัด 1 บรรทัดก่อนนอนคืนนี้ ความชัดของใจคือจุดเริ่มของดวงที่ดี`,
+    `3. ${domTheme.mod && domTheme.mod.mind < 0 ? "พักใจสัก 10 นาทีก่อนตัดสินใจอะไรที่เกี่ยวกับเรื่องนี้" : "ลงมือทำขั้นแรกที่เล็กที่สุดของเรื่องนี้ภายใน 24 ชั่วโมง"}`,
+    `**1 เดือนข้างหน้า:**`,
+    `4. สังเกตว่าเรื่อง "${category || "นี้"}" คลี่คลายไปทางไหนทุกสัปดาห์ แล้วปรับแผนตามจริง ไม่ใช่ตามที่หวังไว้แต่แรก`,
+    `5. ใช้สายงาน/บริบทที่เหมาะกับคุณ (${z.tip}) เป็นเข็มทิศเวลาต้องเลือกระหว่างทางเลือกหลายทาง`,
     ``,
-    `⚖️ คำทำนายเพื่อการสะท้อนตนเองและความบันเทิง การตัดสินใจสำคัญควรใช้ข้อมูลจริงประกอบ`
+    `💭 **ชวนคิด:** ถ้าไม่ต้องกลัวอะไรเลย คุณจะตัดสินใจเรื่องนี้อย่างไร — คำตอบตรงนั้นมักบอกสิ่งที่ใจคุณต้องการจริงๆ`,
+    ``,
+    `🎴 อยากได้สัญญาณเฉพาะของคำถามนี้เพิ่มอีกมุม ไปที่แท็บ "ไพ่" เลือกไพ่ด้วยมือคุณเอง แล้วกลับมาเล่าได้เลยค่ะ · หรือเปิด**โหมด AI ฟรี**ในหน้าตั้งค่า พี่หมอจะซักรายละเอียดเพิ่มและตอบเจาะลึกเฉพาะสถานการณ์ของคุณกว่านี้มาก`,
+    ``,
+    `⚖️ คำทำนายเพื่อการสะท้อนตนเองและความบันเทิง การตัดสินใจสำคัญควรใช้ข้อมูลจริงประกอบเสมอ`
   ].join("\n");
 };

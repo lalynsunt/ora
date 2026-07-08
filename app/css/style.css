@@ -45,6 +45,15 @@ body::before {
 .top { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px 14px; }
 .logo-sm { font-weight: 700; color: var(--gold); letter-spacing: 1px; }
 .date { color: var(--muted); font-size: .85rem; }
+/* หน้าที่มีแค่ title เดียว (ไม่มี date คู่) ให้จัดกลางแบบหัวข้อตำรา พร้อมเส้นประดับสองข้าง */
+.top .logo-sm:only-child {
+  width: 100%; text-align: center; font-size: 1.05rem; letter-spacing: 2px;
+  display: flex; align-items: center; gap: 10px;
+}
+.top .logo-sm:only-child::before, .top .logo-sm:only-child::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(230,195,107,.5), transparent);
+}
 
 /* ---- onboarding ---- */
 .onboard-wrap { padding-top: 8vh; }
@@ -56,9 +65,24 @@ body::before {
   background: linear-gradient(170deg, rgba(255,255,255,.045) 0%, transparent 40%), var(--card);
   border: 1px solid rgba(230,195,107,.22);
   border-radius: var(--radius); padding: 18px; margin-bottom: 14px;
-  box-shadow: 0 6px 28px rgba(10,4,32,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  box-shadow: 0 6px 28px rgba(10,4,32,.5), inset 0 1px 0 rgba(255,255,255,.06),
+              inset 0 0 0 3px rgba(10,4,32,.35), inset 0 0 0 4px rgba(230,195,107,.1);
+  position: relative;
 }
-.card h3 { color: var(--gold); font-size: 1rem; margin-bottom: 10px; }
+/* มุมทองประดับ 4 มุมการ์ด — ให้ความรู้สึกกรอบตำราโบราณ */
+.card::before, .card::after {
+  content: "❖"; position: absolute; color: rgba(230,195,107,.45); font-size: 11px; line-height: 1;
+}
+.card::before { top: 6px; left: 8px; }
+.card::after { top: 6px; right: 8px; }
+.card h3 {
+  color: var(--gold); font-size: 1rem; margin-bottom: 12px; padding-bottom: 8px;
+  position: relative;
+}
+.card h3::after {
+  content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 1px;
+  background: linear-gradient(90deg, rgba(230,195,107,.55) 0%, rgba(230,195,107,.55) 40%, transparent 100%);
+}
 label { display: block; font-size: .9rem; color: var(--muted); margin: 12px 0 6px; }
 .hint { font-size: .78rem; color: var(--muted); line-height: 1.5; }
 .hint a { color: var(--accent); }
@@ -113,6 +137,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); }
 .color-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 .color-pill { display: flex; align-items: center; gap: 8px; background: var(--card2); border-radius: 999px; padding: 6px 14px 6px 8px; font-size: .85rem; }
 .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); }
+.dot-lg { width: 40px; height: 40px; flex-shrink: 0; box-shadow: 0 0 16px currentColor; }
+.lucky-today-card { border-color: rgba(230,195,107,.5); }
+.lucky-today-row { display: flex; align-items: center; gap: 14px; }
+.lucky-today-name { font-size: 1.15rem; font-weight: 700; color: var(--gold); }
 .list-line { margin: 6px 0; line-height: 1.65; font-size: .95rem; }
 .affirm { font-style: italic; color: var(--gold); text-align: center; padding: 12px; line-height: 1.6; }
 
@@ -179,7 +207,21 @@ nav button {
   font-family: inherit; font-size: .7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
 nav button span { font-size: 1.25rem; }
+nav button img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); opacity: .78; transition: opacity .15s, transform .15s; }
+nav button .nav-emoji { font-size: 1.25rem; line-height: 26px; height: 26px; }
+nav button.active img { opacity: 1; transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(230,195,107,.7)); }
 nav button.active { color: var(--gold); text-shadow: 0 0 12px rgba(230,195,107,.7); }
+
+/* ---- chips แบบไอคอน (หมวดคำถามในห้องถามดวง) ---- */
+.chips-icon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.chips-icon .chip {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px; border-radius: 14px; font-size: .8rem;
+}
+.chips-icon .chip img { width: 40px; height: 40px; object-fit: contain; }
+.chips-icon .chip .nav-emoji { font-size: 2rem; line-height: 1; }
+.chips-icon .chip.sel { background: rgba(230,195,107,.16); border-color: var(--gold); }
+.chips-icon .chip.sel img { filter: drop-shadow(0 0 6px rgba(230,195,107,.6)); }
 
 /* ---- chips แบบแสดงผล (ไม่ใช่ปุ่ม) ---- */
 .chip.static { cursor: default; background: var(--card2); border-color: rgba(177,140,255,.35); }

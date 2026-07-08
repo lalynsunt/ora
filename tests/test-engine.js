@@ -137,5 +137,52 @@ const bpr = Engine.bloodPersona(p, "A");
 check("bloodPersona มีครบทุกส่วน", bpr && bpr.beliefNote && bpr.bloodTrait && bpr.synthesis && bpr.caution);
 check("bloodPersona กรุ๊ปไม่รู้จัก = null", Engine.bloodPersona(p, "X") === null);
 
+// 16) สีนำโชควันนี้ (แยกจากสีประจำตัว)
+const dToday = Engine.daily(p, new Date("2026-07-07T12:00:00"));
+check("daily มี todayColor", dToday.todayColor && dToday.todayColor.hex && dToday.todayColor.color);
+check("todayColor ตรงกับดาววันนี้", dToday.todayColor === K.PLANETS[dToday.todayPlanet]);
+check("daily มี isAvoidDay (boolean)", typeof dToday.isAvoidDay === "boolean");
+const wedProfile = Engine.buildProfile({ dob: "1995-03-15" }); // เกิดวันพุธ → กาลกิณีคืออังคาร
+const dTue = Engine.daily(wedProfile, new Date("2026-07-07T12:00:00")); // 2026-07-07 = วันอังคาร
+check("isAvoidDay ตรงกับ position กาลกิณีจริง", dTue.isAvoidDay === (dTue.position === "กาลกิณี"));
+
+// 17) K.L / K.planetName / K.positionName / K.elementName — ตัวช่วย i18n (fallback ไทยเมื่อไม่มี I18N)
+check("K.L fallback ไทยเมื่อไม่มี I18N global", K.L(K.DAY_TRAITS["อาทิตย์"], "t") === K.DAY_TRAITS["อาทิตย์"].t);
+check("K.planetName fallback ไทยเมื่อไม่มี I18N", K.planetName("อาทิตย์") === "อาทิตย์");
+check("K.positionName fallback ไทยเมื่อไม่มี I18N", K.positionName("เดช") === "เดช");
+check("K.elementName fallback ไทยเมื่อไม่มี I18N", K.elementName("ไฟ") === "ไฟ");
+// จำลอง I18N.lang = en แล้วเช็คว่า K.L หยิบ .en ถูกต้อง
+globalThis.I18N = { lang: "en" };
+check("K.L คืนค่า en เมื่อ I18N.lang=en", K.L(K.DAY_TRAITS["อาทิตย์"], "t") === K.DAY_TRAITS["อาทิตย์"].en.t);
+check("K.planetName คืนค่า en เมื่อ I18N.lang=en", K.planetName("อาทิตย์") === "Sun");
+check("K.positionName คืนค่า en เมื่อ I18N.lang=en", K.positionName("เดช") === "Authority");
+check("K.elementName คืนค่า en เมื่อ I18N.lang=en", K.elementName("ไฟ") === "Fire");
+check("K.L fallback ไทยถ้า field นั้นไม่มี .en (เช่น ruler)", K.L(K.ZODIAC[0], "ruler") === K.ZODIAC[0].ruler);
+delete globalThis.I18N;
+
+// 18) เนื้อหา 2 ภาษาครบทุก entry ที่ต้องมี (DAY_TRAITS 8, ZODIAC 12, SAWOEY_THEME 8)
+check("DAY_TRAITS ทุกดาวมี .en ครบ (t,d,str,weak,job)",
+  K.TAKSA.every(pl => { const e = K.DAY_TRAITS[pl].en; return e && e.t && e.d && e.str.length === 3 && e.weak.length === 2 && e.job; }));
+check("ZODIAC ทุกราศีมี .en ครบ (n,tr,str,weak,tip)",
+  K.ZODIAC.every(z => z.en && z.en.n && z.en.tr && z.en.str.length === 3 && z.en.weak.length === 2 && z.en.tip));
+check("SAWOEY_THEME ทุกตำแหน่งมี .en + gradeKey",
+  K.POSITIONS.every(pos => { const t = K.SAWOEY_THEME[pos]; return t.en && t.en.t && t.en.d && t.en.g && ["great", "good", "neutral", "challenge"].includes(t.gradeKey); }));
+check("LIFEPATH ทุกเลขมี .en (string)", Object.keys(K.LIFEPATH).every(n => typeof K.LIFEPATH[n].en === "string" && K.LIFEPATH[n].en.length > 20));
+check("POSITION_THEME ทุกตำแหน่งมี .en", K.POSITIONS.every(pos => K.POSITION_THEME[pos].en && K.POSITION_THEME[pos].en.t));
+
+// 19) คำเฝ้าระวังต้องครอบคลุมอังกฤษด้วย (ผู้ใช้พิมพ์ได้ทุกภาษาไม่ว่า UI ตั้งภาษาไหน)
+check("CRISIS_WORDS มีคำอังกฤษ", K.CRISIS_WORDS.some(w => /^[a-z ]+$/.test(w)));
+check("SENSITIVE_WORDS มีคำอังกฤษ", K.SENSITIVE_WORDS.some(w => /^[a-z ]+$/.test(w)));
+check("safetyCheck จับคำอังกฤษ crisis ได้", Engine.safetyCheck("I want to end my life") === "crisis");
+check("safetyCheck จับคำอังกฤษ sensitive ได้", Engine.safetyCheck("give me lottery numbers") === "sensitive");
+check("safetyCheck ยังจับคำไทยได้เหมือนเดิม", Engine.safetyCheck("ไม่อยากอยู่แล้ว") === "crisis");
+
+// 20) ruleAnswer ลึกขึ้น (ตาม task เพิ่มความยาว 100%)
+const ansDeep = Engine.ruleAnswer(p, "การงาน", "ควรย้ายงานไหม");
+check("ruleAnswer ยาวขึ้นมาก (>2500 ตัวอักษร)", ansDeep.length > 2500, ansDeep.length);
+check("ruleAnswer มีแผนลงมือทำ", ansDeep.includes("แผนลงมือทำ"));
+check("ruleAnswer มีมุมที่ควรระวังแยกหัวข้อ", ansDeep.includes("มุมที่ควรระวัง"));
+check("ruleAnswer อ้างคำถามผู้ใช้กลับ", ansDeep.includes("ควรย้ายงานไหม"));
+
 console.log(fail === 0 ? "\n=== ALL TESTS PASSED ===" : "\n=== " + fail + " FAILED ===");
 process.exit(fail ? 1 : 0);

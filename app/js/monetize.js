@@ -5,6 +5,11 @@
 // ============================================================
 const MZ = {};
 
+// ---------- Free-mode master switch ----------
+// ช่วง QA เนื้อหา: ปลดล็อกทุกอย่างฟรี ไม่ผ่าน paywall/quota เลย
+// ปิดกลับมาใช้ระบบจริง: ตั้งเป็น false บรรทัดเดียว โครง tier/pricing/redeem ทั้งหมดยังอยู่ครบ
+MZ.FREE_MODE = true;
+
 // ---------- Tier & quota config ----------
 MZ.TIERS = {
   free:    { rank: 0, aiAskPerDay: 5,  scanPerDay: 2,  integrated: false },
@@ -37,6 +42,7 @@ MZ.usageToday = function (state) {
 
 // feature: "aiAsk" | "scan" | "integrated"
 MZ.can = function (state, feature) {
+  if (MZ.FREE_MODE) return true;
   const t = MZ.TIERS[MZ.tier(state)];
   const u = MZ.usageToday(state);
   if (feature === "aiAsk") return u.aiAsk < t.aiAskPerDay;
@@ -67,6 +73,7 @@ MZ.redeem = function (state, code) {
 
 // ---------- Paywall modal (localized) ----------
 MZ.showPaywall = function (state, reason) {
+  if (MZ.FREE_MODE) return; // QA period — ไม่แสดง paywall เลย
   const p = MZ.pricingFor(I18N.country);
   const fmt = v => p.sym + v.toLocaleString();
   const modal = document.getElementById("modal");

@@ -132,12 +132,13 @@
   }
 
   // ---------- feedback widget ----------
+  // หมายเหตุ: ค่า data-v เก็บเป็นภาษาไทยคงที่เสมอ (ใช้เป็น value ภายใน/ผูกกับ memory) — ป้ายที่เห็นเท่านั้นที่ localize
   function fbWidget(context) {
     return `<div class="fb-row" data-ctx="${context}">
-      <button class="fb-btn" data-v="แม่นมาก">😍 แม่นมาก</button>
-      <button class="fb-btn" data-v="ค่อนข้างตรง">🙂 ค่อนข้างตรง</button>
-      <button class="fb-btn" data-v="เฉยๆ">😐 เฉยๆ</button>
-      <button class="fb-btn" data-v="ไม่ตรง">🙅 ไม่ตรง</button>
+      <button class="fb-btn" data-v="แม่นมาก">${I18N.t("fb.great")}</button>
+      <button class="fb-btn" data-v="ค่อนข้างตรง">${I18N.t("fb.ok")}</button>
+      <button class="fb-btn" data-v="เฉยๆ">${I18N.t("fb.meh")}</button>
+      <button class="fb-btn" data-v="ไม่ตรง">${I18N.t("fb.miss")}</button>
     </div>`;
   }
   document.addEventListener("click", e => {
@@ -155,7 +156,7 @@
     saveState();
     if (!row.nextElementSibling || !row.nextElementSibling.classList.contains("fb-thanks")) {
       row.insertAdjacentHTML("afterend",
-        `<p class="fb-thanks">ขอบคุณค่ะ 💛 ยิ่งบอก ยิ่งปรับให้เฉพาะตัวคุณมากขึ้น</p>`);
+        `<p class="fb-thanks">${I18N.t("fb.thanks")}</p>`);
     }
   });
 
@@ -163,40 +164,54 @@
   function stars(n) { return "★".repeat(n) + "☆".repeat(5 - n); }
   function renderHome() {
     const today = new Date();
-    $("home-date").textContent = today.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("home-date").textContent = today.toLocaleDateString(I18N.contentLocale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const d = Engine.daily(profile, today);
     const c = profile.colors;
+    const planetTH = d.todayPlanet, birthPlanetTH = profile.birthPlanet;
     $("home-content").innerHTML = `
       <div class="hero">
-        <div class="greet">สวัสดีค่ะ ${esc(profile.name)} 🌅</div>
+        <div class="greet">${esc(I18N.t("home.greet", { name: profile.name }))}</div>
         <div class="overall">${stars(d.overall)}</div>
-        <div class="theme-t">✨ ${esc(d.theme.t)}</div>
+        <div class="theme-t">✨ ${esc(K.L(d.theme, "t"))}</div>
         <div class="theme-d">${esc(Engine.dailyText(profile, d))}</div>
       </div>
       <div class="scores">
         ${Object.entries(d.scores).map(([k, v]) =>
-          `<div class="score-item"><div class="k">${k}</div><div class="v">${stars(v)}</div></div>`).join("")}
+          `<div class="score-item"><div class="k">${esc(I18N.scoreLabel(k))}</div><div class="v">${stars(v)}</div></div>`).join("")}
       </div>
-      <div class="card">
-        <h3>🎨 สีของคุณ (ตามผังมหาทักษาวัน${esc(profile.birthPlanet)})</h3>
-        <div class="color-row">
-          <span class="color-pill"><span class="dot" style="background:${c.power.hex}"></span>อำนาจ-การงาน: ${esc(c.power.color)}</span>
-          <span class="color-pill"><span class="dot" style="background:${c.luck.hex}"></span>โชคลาภ-เสน่ห์: ${esc(c.luck.color)}</span>
-          <span class="color-pill"><span class="dot" style="background:${c.avoid.hex}"></span>ควรเลี่ยง: ${esc(c.avoid.color)}</span>
+      <div class="card lucky-today-card">
+        <h3>${I18N.t("home.lucky.title")}</h3>
+        <div class="lucky-today-row">
+          <span class="dot dot-lg" style="background:${d.todayColor.hex}"></span>
+          <div>
+            <div class="lucky-today-name">${esc(d.todayColor.color)}</div>
+            <div class="hint">${esc(I18N.t("home.lucky.ruledBy", { planet: K.planetName(planetTH), position: K.positionName(d.position) }))}</div>
+          </div>
         </div>
-        <p class="hint" style="margin-top:8px">👗 วันนี้ลองหยิบเสื้อผ้าหรือ accessory โทน${esc(c.power.color)} เสริมความมั่นใจ ✨</p>
+        ${d.isAvoidDay
+          ? `<p class="hint" style="margin-top:8px">${I18N.t("home.lucky.avoidNote")}</p>`
+          : `<p class="hint" style="margin-top:8px">${I18N.t("home.lucky.wearNote")}</p>`}
       </div>
       <div class="card">
-        <h3>✅ ควรทำวันนี้</h3>
+        <h3>${esc(I18N.t("home.permcolor.title", { planet: K.planetName(birthPlanetTH) }))}</h3>
+        <div class="color-row">
+          <span class="color-pill"><span class="dot" style="background:${c.power.hex}"></span>${I18N.t("home.permcolor.power")}: ${esc(c.power.color)}</span>
+          <span class="color-pill"><span class="dot" style="background:${c.luck.hex}"></span>${I18N.t("home.permcolor.luck")}: ${esc(c.luck.color)}</span>
+          <span class="color-pill"><span class="dot" style="background:${c.avoid.hex}"></span>${I18N.t("home.permcolor.avoid")}: ${esc(c.avoid.color)}</span>
+        </div>
+        <p class="hint" style="margin-top:8px">${I18N.t("home.permcolor.note")}</p>
+      </div>
+      <div class="card">
+        <h3>${I18N.t("home.dos")}</h3>
         ${d.dos.map(x => `<p class="list-line">• ${esc(x)}</p>`).join("")}
-        <h3 style="margin-top:12px">⚠️ ควรเลี่ยงวันนี้</h3>
+        <h3 style="margin-top:12px">${I18N.t("home.donts")}</h3>
         ${d.donts.map(x => `<p class="list-line">• ${esc(x)}</p>`).join("")}
       </div>
       <div class="card affirm">💬 "${esc(d.affirm)}"</div>
       ${baseChartCard()}
       ${bloodCard()}
       <div class="card">
-        <p class="hint center">คำทำนายวันนี้ตรงกับคุณแค่ไหน?</p>
+        <p class="hint center">${I18N.t("home.feedback.prompt")}</p>
         ${fbWidget("daily:" + d.dateStr)}
       </div>`;
   }
@@ -206,58 +221,58 @@
     const day = K.DAY_TRAITS[profile.birthPlanet];
     const z = profile.zodiac;
     const sw = Engine.sawoey(profile, new Date());
-    const gradeColor = sw && (sw.theme.g.startsWith("ดี") ? "var(--good)" : sw.theme.g === "ท้าทาย" ? "var(--warn)" : "var(--muted)");
+    // gradeColor ต้องอิง gradeKey (ไม่ผูกภาษา) ห้ามเทียบ string ภาษาไทยตรงๆ อีกต่อไป
+    const gradeColor = sw && ({ great: "var(--good)", good: "var(--good)", challenge: "var(--warn)" }[sw.theme.gradeKey] || "var(--muted)");
+    const zName = K.L(z, "n") || z.n;
     return `
       <div class="card">
-        <h3>🧬 พื้นดวงของคุณ</h3>
+        <h3>${I18N.t("home.base.title")}</h3>
         <div class="chips" style="margin-bottom:10px">
-          <span class="chip static">☀️ วัน${esc(profile.birthPlanet)}</span>
-          <span class="chip static">♈ ราศี${esc(z.n)} · ธาตุ${esc(z.el)}</span>
-          ${profile.lagna ? `<span class="chip static">⬆️ ลัคนา~${esc(profile.lagna.name)}</span>` : ""}
-          <span class="chip static">🔢 เลขชีวิต ${profile.lifePath}</span>
+          <span class="chip static">☀️ ${esc(K.planetName(profile.birthPlanet))}</span>
+          <span class="chip static">♈ ${esc(zName)} · ${esc(K.elementName(z.el))}</span>
+          ${profile.lagna ? `<span class="chip static">⬆️ ${esc(K.L(K.zodiacByName(profile.lagna.name), "n") || profile.lagna.name)}</span>` : ""}
+          <span class="chip static">🔢 ${profile.lifePath}</span>
         </div>
-        <p class="list-line"><b style="color:var(--gold)">${esc(day.t)}</b> — ${esc(day.d)}</p>
-        <p class="list-line" style="margin-top:8px"><b>จุดแข็ง:</b> ${day.str.map(s => "• " + esc(s)).join(" ")}</p>
-        <p class="list-line"><b>รู้ทันตัวเอง:</b> ${day.weak.map(s => "• " + esc(s)).join(" ")}</p>
-        <p class="list-line"><b>สายงานที่เสริมดวง:</b> ${esc(day.job)}</p>
-        ${profile.lagna ? `<p class="hint">ลัคนาคำนวณโดยประมาณจากเวลาเกิด (แบบเรือนชั่วยาม)</p>` : `<p class="hint">💡 เพิ่มเวลาเกิดในหน้าตั้งค่า เพื่อดูลัคนาโดยประมาณ</p>`}
+        <p class="list-line"><b style="color:var(--gold)">${esc(K.L(day, "t"))}</b> — ${esc(K.L(day, "d"))}</p>
+        <p class="list-line" style="margin-top:8px"><b>${I18N.t("home.base.strength")}</b> ${(K.L(day, "str") || day.str).map(s => "• " + esc(s)).join(" ")}</p>
+        <p class="list-line"><b>${I18N.t("home.base.selfaware")}</b> ${(K.L(day, "weak") || day.weak).map(s => "• " + esc(s)).join(" ")}</p>
+        <p class="list-line"><b>${I18N.t("home.base.career")}</b> ${esc(K.L(day, "job"))}</p>
+        ${profile.lagna ? `<p class="hint">${I18N.t("home.base.lagnaKnown")}</p>` : `<p class="hint">${I18N.t("home.base.lagnaUnknown")}</p>`}
         ${sw ? `
         <div class="period-box">
-          <h3 style="margin-top:12px">🌊 จังหวะชีวิตช่วงนี้ (ทักษาเสวยอายุ)</h3>
-          <p class="list-line">อายุ ${Math.floor(sw.startAge)}–${Math.floor(sw.endAge)} ปี: <b style="color:var(--gold)">${esc(sw.theme.t)}</b> (ดาว${esc(sw.planet)}เสวยอายุ)</p>
-          <p class="list-line">โทนช่วงนี้: <b style="color:${gradeColor}">${esc(sw.theme.g)}</b> — ${esc(sw.theme.d)}</p>
-          <p class="list-line">⏭️ ช่วงถัดไป: <b>${esc(sw.nextTheme.t)}</b> (โทน${esc(sw.nextTheme.g)}) เริ่มราวปี พ.ศ. ${sw.nextStartYear + 543} (อายุ ${Math.floor(sw.endAge)} ปี)</p>
+          <h3 style="margin-top:12px">${I18N.t("home.period.title")}</h3>
+          <p class="list-line">${I18N.t("home.period.range", { start: Math.floor(sw.startAge), end: Math.floor(sw.endAge) })} <b style="color:var(--gold)">${esc(K.L(sw.theme, "t"))}</b> (${esc(K.planetName(sw.planet))})</p>
+          <p class="list-line">${I18N.t("home.period.tone")} <b style="color:${gradeColor}">${esc(K.L(sw.theme, "g"))}</b> — ${esc(K.L(sw.theme, "d"))}</p>
+          <p class="list-line">${I18N.t("home.period.next")} <b>${esc(K.L(sw.nextTheme, "t"))}</b> (${esc(K.L(sw.nextTheme, "g"))}) ${sw.nextStartYear + 543} (${Math.floor(sw.endAge)})</p>
         </div>` : ""}
       </div>`;
   }
 
-  // การ์ดนิสัยจากกรุ๊ปเลือด+วันเกิด (belief layer — ระบุชัด)
+  // การ์ดนิสัยจากกรุ๊ปเลือด+วันเกิด (belief layer — ระบุชัด) — เนื้อหาจาก KB ยังเป็นไทยเท่านั้น (ตำราต้นทาง), ป้าย label localize แล้ว
   function bloodCard() {
     if (!state.blood) return "";
     const bp = Engine.bloodPersona(profile, state.blood);
     if (!bp) return "";
     return `
       <div class="card">
-        <h3>🩸 นิสัยจากกรุ๊ปเลือด ${esc(bp.blood)} × วันเกิด</h3>
+        <h3>${esc(I18N.t("home.blood.title", { blood: bp.blood }))}</h3>
         <p class="hint">✨ ${esc(bp.beliefNote)}</p>
-        <p class="list-line"><b>มุมกรุ๊ปเลือด:</b> ${esc(bp.bloodTrait)}</p>
-        <p class="list-line"><b>มุมวันเกิด:</b> ${esc(bp.dayTrait)}</p>
-        <p class="list-line"><b>ภาพรวมสามมุม:</b> ${esc(bp.synthesis)}</p>
-        <p class="list-line">✅ <b>แนวทางใช้:</b> ${esc(bp.growth)}</p>
+        <p class="list-line"><b>${I18N.t("home.blood.side1")}</b> ${esc(bp.bloodTrait)}</p>
+        <p class="list-line"><b>${I18N.t("home.blood.side2")}</b> ${esc(bp.dayTrait)}</p>
+        <p class="list-line"><b>${I18N.t("home.blood.synthesis")}</b> ${esc(bp.synthesis)}</p>
+        <p class="list-line">${I18N.t("home.blood.advice")} ${esc(bp.growth)}</p>
       </div>`;
   }
 
   // ---------- ASK ----------
   function renderAskNote() {
-    $("ask-mode-note").innerHTML = state.apiKey
-      ? `🤖 <b>โหมด AI เปิดอยู่</b> — พี่หมอโอราจะถามรายละเอียดเพิ่มก่อนทำนาย เพื่อคำตอบที่ตรงชีวิตคุณจริงๆ`
-      : `📖 ตอนนี้เป็นโหมดตำรา (rule-based) — เปิด<b>โหมด AI ฟรี</b>ได้ในหน้าตั้งค่า เพื่อให้พี่หมอโอราคุยโต้ตอบและเจาะคำถามของคุณได้`;
+    $("ask-mode-note").innerHTML = state.apiKey ? I18N.t("ask.note.ai") : I18N.t("ask.note.classic");
     // แสดงประวัติแชทเดิม (ความจำถาวร) หรือทักทายครั้งแรก
     if ($("chat-box").childElementCount === 0) {
       if (chatHistory.length) {
         chatHistory.forEach(m => appendMsg(m.role === "user" ? "user" : "bot", m.text));
       } else {
-        appendMsg("bot", `สวัสดีค่ะ ${profile.name} 💛 พี่หมอโอราค่ะ\nเลือกหมวดด้านบน หรือพิมพ์คำถามที่อยากรู้มาได้เลยนะคะ เช่น "ควรย้ายงานไหม" "ความสัมพันธ์นี้ควรไปต่อไหม"`);
+        appendMsg("bot", I18N.t("ask.hello", { name: profile.name }));
       }
     }
   }
@@ -306,7 +321,7 @@
       return;
     }
     if (safety === "sensitive") {
-      const m = "เรื่องนี้พี่หมอขอไม่ทำนายแบบฟันธงนะคะ 🙏 เพราะเป็นเรื่องที่ควรใช้ข้อมูลจริงจากผู้เชี่ยวชาญโดยตรง (แพทย์/ผู้เชี่ยวชาญการเงิน)\n\nแต่ถ้าอยากดู**พลังใจและจังหวะชีวิต**ช่วงนี้เพื่อเตรียมตัวให้พร้อม พี่หมอดูให้ได้ค่ะ ลองเล่าความรู้สึกหรือสิ่งที่กังวลมาได้เลยนะคะ";
+      const m = I18N.t("ask.sensitive");
       appendMsg("bot", m); pushChat("bot", m);
       return;
     }
@@ -333,7 +348,7 @@
         return;
       }
       MZ.consume(state, "aiAsk"); saveState();
-      const typingEl = appendMsg("bot", "พี่หมอกำลังเปิดผังดวงของคุณ...", true);
+      const typingEl = appendMsg("bot", I18N.t("ask.thinking"), true);
       try {
         const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory, blood: state.blood, methods });
         const history = chatHistory.slice(-10).map(m => ({ role: m.role, text: m.text }));
@@ -347,11 +362,11 @@
         // upsell เงียบๆ หลังจบ single-method (หลักการ: ศาสตร์เดียวต้องจบสมบูรณ์ ไม่ยัดเยียด)
         if (methods.length === 1 && methods[0] !== "integrated" && !state.upsellOff) {
           $("chat-box").insertAdjacentHTML("beforeend",
-            `<div class="upsell-card">💎 อยากเห็นมุมที่หลายศาสตร์ชี้ตรงกัน? ลองโหมด "รวมหลายศาสตร์" ได้จากเมนูด้านบน <button class="fb-btn" onclick="this.parentElement.remove()">ปิด</button></div>`);
+            `<div class="upsell-card">${esc(I18N.t("ask.upsell"))} <button class="fb-btn" onclick="this.parentElement.remove()">${esc(I18N.t("ask.upsell.close"))}</button></div>`);
         }
       } catch (err) {
         typingEl.remove();
-        appendMsg("bot", "ขอโทษค่ะ เชื่อมต่อ AI ไม่สำเร็จ (" + esc(err.message) + ")\nตรวจสอบ API key ในหน้าตั้งค่า หรือลองใหม่อีกครั้งนะคะ — ระหว่างนี้พี่หมอตอบแบบตำราให้ก่อนค่ะ 🙏\n\n" + Engine.ruleAnswer(profile, askCategory, text));
+        appendMsg("bot", I18N.t("ask.error", { err: err.message }) + "\n\n" + Engine.ruleAnswer(profile, askCategory, text));
       }
     } else {
       const reply = Engine.ruleAnswer(profile, askCategory, text);
@@ -367,11 +382,11 @@
     tarotPicked = [];
     $("tarot-content").innerHTML = `
       <div class="card">
-        <p class="list-line">ตั้งจิตนึกถึงเรื่องที่อยากรู้ แล้วเลือกไพ่ <b>3 ใบ</b> ค่ะ 🙏</p>
+        <p class="list-line">${I18N.t("tarot.instruction")}</p>
         <div class="tarot-fan">
           ${Array.from({ length: 12 }, (_, i) => `<div class="tcard" data-i="${i}">✦</div>`).join("")}
         </div>
-        <p class="hint center" id="tarot-status">เลือกแล้ว 0/3 ใบ</p>
+        <p class="hint center" id="tarot-status">${esc(I18N.t("tarot.picked", { n: 0 }))}</p>
       </div>
       <div id="tarot-result"></div>`;
     document.querySelectorAll(".tcard").forEach(el =>
@@ -383,7 +398,7 @@
     el.classList.add("picked");
     el.textContent = "✓";
     tarotPicked.push(el.dataset.i);
-    $("tarot-status").textContent = `เลือกแล้ว ${tarotPicked.length}/3 ใบ`;
+    $("tarot-status").textContent = I18N.t("tarot.picked", { n: tarotPicked.length });
     if (tarotPicked.length === 3) revealTarot();
   }
 
@@ -521,13 +536,15 @@
     // seed จากตำแหน่งที่ผู้ใช้เลือก + เวลา — ผู้ใช้มีส่วนกำหนดผลจริง
     const seed = tarotPicked.join("-") + "|" + Date.now();
     const cards = Engine.tarotDraw(3, seed);
-    const labels = ["อดีต / รากของเรื่อง", "ปัจจุบัน", "แนวโน้มข้างหน้า"];
-    let html = `<div class="card"><h3>🎴 ไพ่ของคุณ</h3>
+    const labels = [I18N.t("tarot.label.past"), I18N.t("tarot.label.present"), I18N.t("tarot.label.future")];
+    // หมายเหตุ: ความหมายไพ่ (c.n/c.th/c.m/c.adv) มาจาก K.TAROT ยังเป็นไทยเท่านั้น (ตำราต้นทาง 22 ใบ) —
+    // โหมด AI จะตีความเป็นภาษาที่เลือกให้เองผ่าน I18N.promptDirective ในทุกกรณี
+    let html = `<div class="card"><h3>${I18N.t("tarot.yourCards")}</h3>
       <div class="tface-row">${cards.map(c => {
         const ci = K.TAROT.indexOf(c);
         return `<div class="tface-wrap" data-idx="${ci}">${tarotSVG(c, getTarotImg(ci))}</div>`;
       }).join("")}</div>
-      ${state.apiKey && cards.some(c => !getTarotImg(K.TAROT.indexOf(c))) ? `<p class="hint center">🎨 กำลังวาดภาพไพ่ของคุณด้วย AI... (ภาพจะค่อยๆ ปรากฏ ใช้ครั้งแรกครั้งเดียว)</p>` : ""}` +
+      ${state.apiKey && cards.some(c => !getTarotImg(K.TAROT.indexOf(c))) ? `<p class="hint center">${I18N.t("tarot.drawing")}</p>` : ""}` +
       cards.map((c, i) => `
         <div class="tres">
           <div class="tname">${esc(labels[i])} — ${c.e} ${esc(c.n)} (${esc(c.th)})</div>
@@ -535,98 +552,97 @@
           <p>💡 ${esc(c.adv)}</p>
         </div>`).join("") +
       `<div id="tarot-ai"></div>
-       <p class="hint center" style="margin-top:10px">ผลไพ่ตรงใจแค่ไหน?</p>${fbWidget("tarot")}</div>`;
+       <p class="hint center" style="margin-top:10px">${I18N.t("tarot.feedback.prompt")}</p>${fbWidget("tarot")}</div>`;
     $("tarot-result").innerHTML = html;
     $("tarot-result").scrollIntoView({ behavior: "smooth" });
     upgradeTarotFaces(cards); // รูปถาวรในแอป → cache → generate เบื้องหลัง
 
     if (state.apiKey) {
-      $("tarot-ai").innerHTML = `<p class="hint">🤖 พี่หมอโอรากำลังตีความไพ่ทั้งสามใบร่วมกับดวงของคุณ...</p>`;
+      $("tarot-ai").innerHTML = `<p class="hint">${I18N.t("tarot.interpreting")}</p>`;
       try {
         const facts = LLM.buildFacts(profile, { cards, job: state.job, tone: state.tone, memory: state.memory });
         const reply = await LLM.chat(state.apiKey, facts,
-          [{ role: "user", text: "ช่วยตีความไพ่ทั้ง 3 ใบนี้ร่วมกัน (อดีต-ปัจจุบัน-แนวโน้ม) ให้เชื่อมโยงกับดวงพื้นฐานของฉัน แบบกระชับ" }]);
+          [{ role: "user", text: "ช่วยตีความไพ่ทั้ง 3 ใบนี้ร่วมกัน (อดีต-ปัจจุบัน-แนวโน้ม) ให้เชื่อมโยงกับดวงพื้นฐานของฉัน แบบละเอียด" }]);
         $("tarot-ai").innerHTML = `<div class="msg bot" style="max-width:100%">${md(reply)}</div>`;
       } catch (e) {
-        $("tarot-ai").innerHTML = `<p class="hint">เชื่อมต่อ AI ไม่สำเร็จ — อ่านความหมายรายใบด้านบนได้เลยค่ะ</p>`;
+        $("tarot-ai").innerHTML = `<p class="hint">${I18N.t("tarot.aiFailed")}</p>`;
       }
     } else {
-      $("tarot-ai").innerHTML = `<p class="hint">💡 เปิดโหมด AI ในหน้าตั้งค่า เพื่อให้พี่หมอโอราตีความไพ่ทั้งสามใบ "เชื่อมโยงกัน" เฉพาะดวงคุณ</p>`;
+      $("tarot-ai").innerHTML = `<p class="hint">${I18N.t("tarot.aiHint")}</p>`;
     }
   }
 
   // ---------- NUMBERS ----------
   function renderNum() {
     const lp = K.LIFEPATH[profile.lifePath];
+    // LIFEPATH.en เป็น string เดี่ยว "หัวข้อ — รายละเอียด" (ไม่ใช่ {t,d} เหมือนที่อื่น) จึงแยกด้วย " — "
+    const titleLine = I18N.lang === "en" && typeof lp.en === "string" ? lp.en.split(" — ")[0] : lp.t;
+    const bodyLine = I18N.lang === "en" && typeof lp.en === "string" ? lp.en.split(" — ").slice(1).join(" — ") : lp.d;
     $("num-lifepath").innerHTML = `
       <div class="num-score">${profile.lifePath}</div>
-      <p class="list-line"><b style="color:var(--gold)">${esc(lp.t)}</b></p>
-      <p class="list-line">${esc(lp.d)}</p>`;
+      <p class="list-line"><b style="color:var(--gold)">${esc(titleLine)}</b></p>
+      <p class="list-line">${esc(bodyLine)}</p>`;
     $("num-result").innerHTML = "";
   }
   $("num-go").addEventListener("click", () => {
     const r = Engine.phone($("num-phone").value);
-    if (!r) { $("num-result").innerHTML = `<p class="hint">กรุณาใส่เบอร์ให้ครบ (9–10 หลัก) ค่ะ</p>`; return; }
+    if (!r) { $("num-result").innerHTML = `<p class="hint">${I18N.t("num.phone.invalid")}</p>`; return; }
     const cls = s => s > 0 ? "good" : (s < 0 ? "low" : "mid");
     const tail = r.pairs.filter(p => p.w === 2);
     const head = r.pairs.filter(p => p.w === 1);
     $("num-result").innerHTML = `
       <div class="num-score">${r.score}/10</div>
-      <p class="list-line">ผลรวมทั้งเบอร์: <b>${r.sum}</b>${r.sumGood ? ` — <span style="color:var(--good)">${esc(r.sumGood)}</span>` : " — พลังกลางๆ ไม่ส่งเสริมไม่ฉุดรั้ง"}</p>
-      ${r.dominant ? `<p class="list-line">🌟 <b>เลขเด่นประจำเบอร์: ${r.dominant.d}</b> (มี ${r.dominant.n} ตัว) — พลังดาว${esc(r.dominant.info.p)} "${esc(r.dominant.info.t)}": ${esc(r.dominant.info.d)}</p>` : ""}
-      <p class="list-line" style="margin-top:10px"><b>🔥 คู่เลขท้าย 4 ตัว (อิทธิพลแรงสุด — น้ำหนัก ×2):</b></p>
+      <p class="list-line">${I18N.t("num.phone.sum")} <b>${r.sum}</b>${r.sumGood ? ` — <span style="color:var(--good)">${esc(r.sumGood)}</span>` : " — " + I18N.t("num.phone.sumNeutral")}</p>
+      ${r.dominant ? `<p class="list-line">${esc(I18N.t("num.phone.dominant", { digit: r.dominant.d, n: r.dominant.n, planet: K.planetName(r.dominant.info.p), trait: r.dominant.info.t, desc: r.dominant.info.d }))}</p>` : ""}
+      <p class="list-line" style="margin-top:10px"><b>${I18N.t("num.phone.tailTitle")}</b></p>
       ${tail.map(p => `<div class="pair-line"><span class="pair-badge ${cls(p.s)}">${p.pair}</span><span>${esc(p.t)}</span></div>`).join("")}
-      <p class="list-line" style="margin-top:10px"><b>คู่เลขส่วนหน้า:</b></p>
+      <p class="list-line" style="margin-top:10px"><b>${I18N.t("num.phone.headTitle")}</b></p>
       ${head.map(p => `<div class="pair-line"><span class="pair-badge ${cls(p.s)}">${p.pair}</span><span>${esc(p.t)}</span></div>`).join("")}
-      <p class="hint" style="margin-top:8px">หลักการอ่าน: เลขแต่ละตัวถือพลังดาว (1=อาทิตย์ 2=จันทร์ 3=อังคาร 4=พุธ 5=พฤหัสฯ 6=ศุกร์ 7=เสาร์ 8=ราหู 9=เกตุ) — คู่เลขคือการส่งพลังร่วมกันของสองดาว ตำแหน่งท้ายเบอร์มีอิทธิพลต่อผู้ใช้มากที่สุด</p>
+      <p class="hint" style="margin-top:8px">${I18N.t("num.phone.principle")}</p>
       <div class="card2-box">
-        <p class="list-line"><b>🎯 อยากได้เบอร์ที่เสริมเป้าหมายไหน?</b> (แนะนำ pattern ตามความเชื่อ — เบอร์ปัจจุบันของคุณใช้ได้เสมอ ไม่จำเป็นต้องเปลี่ยน)</p>
+        <p class="list-line"><b>${I18N.t("num.phone.goalPrompt")}</b></p>
         <div class="chips" id="phone-goals">
-          ${Object.keys(PHONE_GOALS).map(g => `<button class="chip" data-goal="${g}">${g}</button>`).join("")}
+          ${Object.keys(PHONE_GOALS).map(g => `<button class="chip" data-goal="${g}">${I18N.t("num.goal." + g)}</button>`).join("")}
         </div>
         <div id="phone-goal-result"></div>
       </div>
-      <p class="disclaimer">การวิเคราะห์ตามตำราเลขศาสตร์ (belief-based numerology) เพื่อความบันเทิงและความสบายใจ — ไม่ใช่ข้อเท็จจริงทางวิทยาศาสตร์ เบอร์ไม่ได้กำหนดชีวิต ความตั้งใจของคุณต่างหากค่ะ</p>
+      <p class="disclaimer">${I18N.t("num.phone.disclaimer")}</p>
       ${fbWidget("phone")}`;
     document.querySelectorAll("#phone-goals .chip").forEach(ch =>
       ch.addEventListener("click", () => {
         document.querySelectorAll("#phone-goals .chip").forEach(c => c.classList.remove("sel"));
         ch.classList.add("sel");
-        const goal = ch.dataset.goal;
-        const pairs = PHONE_GOALS[goal];
+        const goalKey = ch.dataset.goal;
+        const goalLabel = I18N.t("num.goal." + goalKey);
+        const pairs = PHONE_GOALS[goalKey];
         const aff = MZ.affiliatePhoneMarketplace();
         $("phone-goal-result").innerHTML = `
-          <p class="list-line" style="margin-top:8px"><b>คู่เลขที่ตำรานิยมสำหรับ${esc(goal)}:</b> ${pairs.map(p =>
+          <p class="list-line" style="margin-top:8px"><b>${esc(I18N.t("num.phone.goalPairs", { goal: goalLabel }))}</b> ${pairs.map(p =>
             `<span class="pair-badge good" style="margin:2px">${p}</span>`).join(" ")}</p>
           <p class="hint">${pairs.map(p => K.PHONE_PAIRS[p] ? `${p} = ${K.PHONE_PAIRS[p].t}` : "").filter(Boolean).join(" · ")}</p>
-          <p class="hint">💡 มีคู่เลขเหล่านี้ในตำแหน่งท้ายเบอร์ = อิทธิพลแรงสุดตามตำรา</p>
           <button class="btn-ghost" disabled>🛍️ ${esc(I18N.lang === "th" ? aff.message_th : aff.message_en)}</button>`;
       }));
   });
 
-  // pattern เบอร์ตามเป้าหมาย (จากตาราง K.PHONE_PAIRS — belief-based)
+  // pattern เบอร์ตามเป้าหมาย (จากตาราง K.PHONE_PAIRS — belief-based) — key ภายในคงที่ไม่ผูกภาษา ป้ายมาจาก i18n key num.goal.*
   const PHONE_GOALS = {
-    "การงาน-ผู้บริหาร": ["89", "98", "19", "91", "45", "54"],
-    "การเงิน-ค้าขาย": ["24", "42", "46", "64", "89", "98"],
-    "ความรัก": ["56", "65", "36", "63", "15"],
-    "เสน่ห์-การเจรจา": ["15", "51", "36", "63", "24"],
-    "ผู้ใหญ่สนับสนุน": ["15", "51", "45", "54"]
+    career: ["89", "98", "19", "91", "45", "54"],
+    money: ["24", "42", "46", "64", "89", "98"],
+    love: ["56", "65", "36", "63", "15"],
+    charm: ["15", "51", "36", "63", "24"],
+    support: ["15", "51", "45", "54"]
   };
 
   // ---------- SCAN: ลายมือ / โหงวเฮ้ง / โทนสี-สไตล์ (Gemini vision) ----------
   let scanKind = "palm";
   let scanImage = null; // {base64, mime}
-  const SCAN_DESC = {
-    palm: "🖐️ <b>อ่านลายมือ</b> — กางฝ่ามือข้างที่ถนัด ถ่ายตรงๆ ใต้แสงสว่าง ให้เห็นเส้นชัดทั้งฝ่ามือ พี่หมอจะอ่านเส้นชีวิต สมอง หัวใจ วาสนา และธาตุประจำมือ",
-    face: "👤 <b>ดูโหงวเฮ้ง</b> — ถ่ายหน้าตรง ไม่ใส่ฟิลเตอร์ แสงสว่างสม่ำเสมอ พี่หมอจะดูสามส่วนใบหน้า จุดเด่นเชิงโหงวเฮ้ง พร้อมแนะทรงผมเสริมดวงตามรูปหน้า",
-    style: "👗 <b>วิเคราะห์โทนสีประจำตัว</b> — ถ่ายหน้าตรงใต้แสงธรรมชาติ ไม่แต่งฟิลเตอร์ พี่หมอจะประเมิน Warm/Cool tone และ Season ของคุณ แล้วผสมกับสีมงคลประจำดวง เป็นคู่มือแต่งตัว+ทรงผมเฉพาะตัว"
-  };
+  function scanDesc(kind) { return I18N.t("scan.desc." + kind); }
 
   function renderScan() {
     const hasKey = !!state.apiKey;
     $("scan-gate").classList.toggle("hidden", hasKey);
     $("scan-main").classList.toggle("hidden", !hasKey);
-    if (hasKey) $("scan-desc").innerHTML = SCAN_DESC[scanKind];
+    if (hasKey) $("scan-desc").innerHTML = scanDesc(scanKind);
   }
   $("scan-goto-set").addEventListener("click", () => show("set"));
   document.querySelectorAll(".scan-kinds .chip").forEach(ch =>
@@ -637,7 +653,7 @@
       scanImage = null;
       $("scan-preview-wrap").classList.add("hidden");
       $("scan-result").innerHTML = "";
-      $("scan-desc").innerHTML = SCAN_DESC[scanKind];
+      $("scan-desc").innerHTML = scanDesc(scanKind);
     }));
   $("scan-pick").addEventListener("click", async () => {
     const ok = await askConsent(scanKind); // consent localized ก่อนแตะรูปเสมอ
@@ -672,10 +688,10 @@
     let html = "";
     try {
       const q = await ScanTools.checkImageQuality(dataUrl);
-      html += `<div class="card"><h3>🔍 คุณภาพภาพ: ${q.score}/100 ${q.ok ? "✓" : ""}</h3>`;
+      html += `<div class="card"><h3>${esc(I18N.t("scan.quality.title", { score: q.score }))} ${q.ok ? "✓" : ""}</h3>`;
       if (!q.ok) {
         html += q.issues.map(i => `<p class="list-line">⚠️ ${esc(qtips[i] || i)}</p>`).join("");
-        html += `<p class="hint">ยังวิเคราะห์ได้ แต่ภาพที่ดีขึ้น = คำตอบละเอียดขึ้น — พี่หมอจะไม่เดาในส่วนที่มองไม่เห็น</p>`;
+        html += `<p class="hint">${I18N.t("scan.quality.note")}</p>`;
       }
       html += `</div>`;
       if (scanKind === "palm") {
@@ -683,13 +699,13 @@
         const det = await ScanTools.detectPalmLines(dataUrl);
         const overlay = await ScanTools.generatePalmOverlay(enhanced, det);
         html += `
-          <div class="card"><h3>🖐️ ภาพลายมือของคุณ</h3>
+          <div class="card"><h3>${I18N.t("scan.palm.title")}</h3>
             <div class="palm-compare">
-              <figure><img src="${dataUrl}" alt="ต้นฉบับ"><figcaption>ต้นฉบับ</figcaption></figure>
-              <figure><img src="${enhanced}" alt="ปรับให้เห็นเส้นชัด"><figcaption>ปรับเส้นชัดขึ้น</figcaption></figure>
+              <figure><img src="${dataUrl}" alt="${esc(I18N.t("scan.palm.original"))}"><figcaption>${I18N.t("scan.palm.original")}</figcaption></figure>
+              <figure><img src="${enhanced}" alt="${esc(I18N.t("scan.palm.enhanced"))}"><figcaption>${I18N.t("scan.palm.enhanced")}</figcaption></figure>
             </div>
-            <figure class="palm-overlay"><img src="${overlay}" alt="ตำแหน่งเส้นหลัก">
-              <figcaption>ตำแหน่งเส้นหลัก${det.isMock ? "โดยประมาณ (ตำแหน่งมาตรฐาน — ระบบชี้ตำแหน่งจริงจะมาในรุ่นถัดไป)" : ""}</figcaption></figure>
+            <figure class="palm-overlay"><img src="${overlay}" alt="${esc(I18N.t("scan.palm.overlayCaption"))}">
+              <figcaption>${I18N.t("scan.palm.overlayCaption")}${det.isMock ? I18N.t("scan.palm.overlayApprox") : ""}</figcaption></figure>
           </div>`;
       }
     } catch (e) { /* เครื่องมือภาพล้ม — ไม่ขวางการวิเคราะห์ */ }
@@ -702,7 +718,7 @@
     const old = document.getElementById("scan-ai-result");
     if (old) old.remove();
     $("scan-result").insertAdjacentHTML("beforeend",
-      `<div class="card" id="scan-ai-result"><p class="hint">🔮 พี่หมอกำลังเพ่งพิจารณาภาพของคุณ... (10–20 วินาที)</p></div>`);
+      `<div class="card" id="scan-ai-result"><p class="hint">${I18N.t("scan.analyzing")}</p></div>`);
     try {
       const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory, blood: state.blood, methods: [scanKind] });
       const reply = await LLM.vision(state.apiKey, scanKind, scanImage.base64, scanImage.mime, facts);
@@ -714,17 +730,17 @@
           const crops = await ScanTools.cropFaceRegions(scanImage.dataUrl, det);
           cropsHtml = `<div class="face-crops">` + crops.map(c =>
             `<figure><img src="${c.dataUrl}" alt="${esc(c.th)}"><figcaption>${esc(c.th)}</figcaption></figure>`).join("") +
-            `</div><p class="hint">ตำแหน่ง crop เป็นสัดส่วนมาตรฐานของภาพหน้าตรง${det.isMock ? " (ระบบชี้ตำแหน่งจริงจะมาในรุ่นถัดไป)" : ""}</p>`;
+            `</div><p class="hint">${I18N.t("scan.faceCropNote")}${det.isMock ? I18N.t("scan.faceCropNoteApprox") : ""}</p>`;
         } catch (e) { /* crop ไม่ได้ก็ข้าม */ }
       }
       document.getElementById("scan-ai-result").innerHTML = `${cropsHtml}<div class="msg bot" style="max-width:100%">${md(reply)}</div>
-        <p class="hint center" style="margin-top:8px">ผลวิเคราะห์ตรงใจแค่ไหน?</p>${fbWidget("scan:" + scanKind)}`;
+        <p class="hint center" style="margin-top:8px">${I18N.t("scan.feedback.prompt")}</p>${fbWidget("scan:" + scanKind)}`;
       Engine.remember(state, { d: new Date().toISOString().slice(0, 10), cat: "สแกน-" + scanKind, q: "วิเคราะห์" + (scanKind === "palm" ? "ลายมือ" : scanKind === "face" ? "โหงวเฮ้ง" : "โทนสี") });
       saveState();
       scanImage = null; // ไม่เก็บภาพไว้ในหน่วยความจำต่อ
       $("scan-result").scrollIntoView({ behavior: "smooth" });
     } catch (err) {
-      $("scan-result").innerHTML = `<div class="card"><p class="hint">ขอโทษค่ะ วิเคราะห์ไม่สำเร็จ (${esc(err.message)}) — ตรวจสอบ API key หรือลองรูปที่เล็กลง/ชัดขึ้นอีกครั้งนะคะ</p></div>`;
+      $("scan-result").innerHTML = `<div class="card"><p class="hint">${esc(I18N.t("scan.failed", { err: err.message }))}</p></div>`;
     }
   });
 
@@ -733,21 +749,23 @@
     const s = Engine.personalization(state);
     $("pscore-bar").style.width = s + "%";
     $("pscore-text").textContent = `${s}/100 — ` + (s < 40
-      ? "เพิ่มเวลาเกิด อาชีพ หรือให้ feedback หลังคำทำนาย เพื่อให้ดวงเฉพาะตัวขึ้น"
-      : s < 70 ? "กำลังดี! ยิ่งถาม-ยิ่งให้ feedback ระบบยิ่งรู้จักคุณ" : "ดวงของคุณเฉพาะตัวมากแล้วค่ะ ✨");
+      ? I18N.t("set.pscore.low")
+      : s < 70 ? I18N.t("set.pscore.mid") : I18N.t("set.pscore.high"));
     $("set-key").value = state.apiKey || "";
-    $("set-key-status").textContent = state.apiKey ? "✅ โหมด AI เปิดใช้งานอยู่" : "ยังไม่ได้ใส่ key — ใช้โหมดตำราอยู่";
+    $("set-key-status").textContent = state.apiKey ? I18N.t("set.ai.on") : I18N.t("set.ai.off");
     // ---- ภาษา/ประเทศ ----
     fillLangSelect($("set-lang"), I18N.lang);
     fillCountrySelect($("set-country"), I18N.country);
     $("set-lang-status").textContent = I18N.translationStatus() === "placeholder"
-      ? "* ภาษานี้ยังเป็นเวอร์ชันเริ่มต้น (UI จะแสดงภาษาอังกฤษ, AI ตอบภาษานั้นได้เมื่อเปิดโหมด AI)" : "";
+      ? `* ${I18N.langInfo().native} — content shows in English for now; AI mode can still reply in this language` : "";
     // ---- tier/quota ----
-    const tierName = MZ.tier(state).toUpperCase();
+    const tierName = MZ.FREE_MODE ? "FREE QA" : MZ.tier(state).toUpperCase();
     $("set-tier-name").textContent = tierName;
     const tcfg = MZ.TIERS[MZ.tier(state)];
     const u = MZ.usageToday(state);
-    $("set-quota").textContent = `วันนี้ใช้: ถาม AI ${u.aiAsk}/${tcfg.aiAskPerDay} · สแกน ${u.scan}/${tcfg.scanPerDay} · Integrated: ${tcfg.integrated ? "✓" : "ต้อง Premium"}`;
+    $("set-quota").textContent = MZ.FREE_MODE
+      ? I18N.t("set.quota.free")
+      : `${I18N.t("set.quota.used")} AI ${u.aiAsk}/${tcfg.aiAskPerDay} · ${I18N.t("nav.scan")} ${u.scan}/${tcfg.scanPerDay} · Integrated: ${tcfg.integrated ? "✓" : I18N.t("set.quota.needPremium")}`;
     // ---- prefs ----
     $("set-astro").value = state.astroSystem || "";
     $("set-blood").value = state.blood || "";
@@ -755,10 +773,14 @@
     $("set-tone").value = state.tone || "";
     const memN = (state.memory || []).length;
     $("set-memory").textContent = memN
-      ? `ตอนนี้พี่หมอจำเรื่องที่เคยคุยไว้ ${memN} เรื่อง — จะถูกใช้เชื่อมโยงคำทำนายครั้งถัดไป`
-      : "ยังไม่มีบทสนทนาให้จำ — ลองถามดวงดูสิคะ";
-    $("set-profile").textContent =
-      `${state.name || "-"} · เกิด ${state.dob}${state.birthTime ? " เวลา " + state.birthTime : ""} · วัน${profile.birthPlanet} · ราศี${profile.zodiac.n} · เลขชีวิต ${profile.lifePath}${state.job ? " · " + state.job : ""}`;
+      ? I18N.t("set.memory.has", { n: memN })
+      : I18N.t("set.memory.empty");
+    $("set-profile").textContent = I18N.t("set.profile.summary", {
+      name: state.name || "-", dob: state.dob,
+      timeSuffix: state.birthTime ? (I18N.lang === "en" ? " at " + state.birthTime : " เวลา " + state.birthTime) : "",
+      planet: K.planetName(profile.birthPlanet), zodiac: K.L(profile.zodiac, "n") || profile.zodiac.n, lp: profile.lifePath,
+      jobSuffix: state.job ? " · " + state.job : ""
+    });
   }
   $("set-key-save").addEventListener("click", () => {
     state.apiKey = $("set-key").value.trim() || null;
@@ -775,8 +797,8 @@
   $("set-code-go").addEventListener("click", () => {
     const r = MZ.redeem(state, $("set-code").value);
     $("set-code-status").textContent = r.ok
-      ? `✅ ปลดล็อก ${r.tier.toUpperCase()} สำเร็จ${r.kiosk ? " (สิทธิ์จากตู้ ORA)" : ""}`
-      : "รหัสไม่ถูกต้องค่ะ";
+      ? `✅ ${r.tier.toUpperCase()} ${r.kiosk ? "(kiosk)" : ""}`
+      : (I18N.lang === "en" ? "Invalid code" : "รหัสไม่ถูกต้องค่ะ");
     if (r.ok) { saveState(); renderSettings(); }
   });
   $("set-astro").addEventListener("change", () => { state.astroSystem = $("set-astro").value || null; saveState(); });
@@ -802,7 +824,7 @@
     $("scr-onboard").classList.remove("hidden");
   });
   $("set-wipe").addEventListener("click", () => {
-    if (confirm("ลบข้อมูลทั้งหมด (โปรไฟล์, feedback, API key) ออกจากเครื่องนี้?")) {
+    if (confirm(I18N.t("set.wipeConfirm"))) {
       localStorage.removeItem(SKEY);
       state = {}; chatHistory = []; profile = null;
       location.reload();

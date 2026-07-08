@@ -17,9 +17,19 @@ app/
                         แหล่งต้นทาง: C:\Users\rattanos\Documents\Codex\2026-07-08\1-knowledge-engineer-ai-ontology-taxonomy\outputs\
                         (แก้ตำราให้แก้ที่ต้นทางก่อน แล้ว sync มาที่ kb.js)
   js/i18n.js          — 10 ภาษา (th/en full, ที่เหลือ placeholder fallback→en), ประเทศ+cultural context,
-                        I18N.t()/apply()/detect()/promptDirective() — UI ใช้ data-i18n attributes
+                        I18N.t(key,vars)/apply()/detect()/promptDirective()/scoreLabel()
+                        UI ใช้ data-i18n (textContent) / data-i18n-html (innerHTML — ใช้เมื่อมี <a> ฯลฯ) /
+                        data-i18n-ph (placeholder) — เนื้อหา JS-rendered ต้องเรียก I18N.t() ตรงในทุก render
+                        ห้าม hardcode ข้อความไทย/อังกฤษใน render function อีก (นี่คือบั๊กที่เคยเกิด — เปลี่ยนภาษาแล้ว
+                        มีแค่บาง label เปลี่ยน) ตำราเนื้อหา 2 ภาษา (K.DAY_TRAITS/K.ZODIAC/K.SAWOEY_THEME/K.LIFEPATH/
+                        K.POSITION_THEME ใน knowledge.js) ดึงผ่าน K.L(entry,field)/K.planetName()/K.positionName()/
+                        K.elementName() — fallback ไทยเสมอถ้าไม่มี .en หรือไม่มี I18N global (เช่นใน tests)
+                        Engine.ruleAnswer/K.TAROT/K.PHONE_PAIRS/KB.* ยังเป็นไทยอย่างเดียว (ตำราต้นฉบับ) —
+                        โหมด AI จะตีความเป็นภาษาที่เลือกให้เองผ่าน promptDirective เสมอไม่ว่า FACTS จะเป็นไทย
   js/monetize.js      — tiers (free/plus/premium/vip) + โควตารายวัน + pricing_by_country +
                         paywall modal + redeem code (ORA-DEV-*, ORA-KIOSK-* placeholder)
+                        MZ.FREE_MODE = true ตอนนี้ (ช่วง QA เนื้อหา) — ปลดล็อกทุกอย่างฟรี ไม่ผ่าน quota/paywall
+                        เปลี่ยนกลับเป็น false บรรทัดเดียวเมื่อพร้อมเปิด monetization จริง (โครง tier ทั้งหมดยังอยู่ครบ)
   js/scan-tools.js    — ตรวจคุณภาพภาพ (จริง), enhance ลายมือ (จริง: contrast+sharpen),
                         palm overlay + face region crops (placeholder ตำแหน่งมาตรฐาน — interface
                         พร้อมสลับ CV model จริง), virtual try-on placeholder
@@ -30,7 +40,11 @@ app/
                         state สำคัญ: chat(40), memory(30), lang, country, blood, undertone, tier,
                         usage(โควตารายวัน), consent{palm,face,style} — ห้ามส่งออกนอกเครื่องผู้ใช้
   sw.js, manifest.webmanifest, icon.svg — PWA (แก้ไฟล์ app/ ต้อง bump CACHE เวอร์ชัน)
-  assets/tarot/NN.jpg — ภาพไพ่ถาวร (สร้างจากบัญชี Gemini ที่จ่ายเงิน — ดู TAROT-ART-GUIDE.md)
+  assets/tarot/NN.jpg — ภาพไพ่ถาวร 22 ใบ (สร้างจากบัญชี Gemini ที่จ่ายเงิน — ดู TAROT-ART-GUIDE.md) มีครบแล้ว
+  assets/icons/*.png  — ไอคอน nav 5 อัน (nav-today/ask/tarot/scan/settings) + category 6 อัน
+                        (cat-love/work/money/family/education/heart-small) — cropped จาก icon sheet ต้นฉบับ
+                        (Icon.jfif) ด้วย background segmentation + flood-fill transparency, พื้นหลังโปร่งใสแล้ว
+                        "ตัวเลข" (numbers) ในแถบเมนูยังไม่มี asset — ใช้ emoji 🔢 (.nav-emoji class) แทน
 01-*.md, 02-*.md, 03-*.md — แผนธุรกิจฉบับเต็ม (reference, gitignored)
 AI-OPS-PLAYBOOK.md / DEPLOY.md / STORE-ROADMAP.md / TAROT-ART-GUIDE.md — คู่มือ ops
 ```
