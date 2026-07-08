@@ -183,6 +183,26 @@ Engine.remember = function (state, rec) {
   if (state.memory.length > 30) state.memory = state.memory.slice(-30); // จำ 30 เรื่องล่าสุด
 };
 
+// ---------- โปรไฟล์นิสัย: กรุ๊ปเลือด (cultural belief) + วันเกิด (เลขศาสตร์/โหรา) ----------
+// คืน sections พร้อมป้ายว่าส่วนไหนเป็นความเชื่อ ส่วนไหนเป็น coaching
+Engine.bloodPersona = function (profile, bloodType) {
+  const kbB = KB.get("blood_type", bloodType);
+  if (!kbB) return null;
+  const day = K.DAY_TRAITS[profile.birthPlanet];
+  const lp = K.LIFEPATH[profile.lifePath];
+  return {
+    blood: bloodType,
+    beliefNote: "ความเชื่อเรื่องกรุ๊ปเลือดกับนิสัยเป็นวัฒนธรรมเอเชียตะวันออก (ญี่ปุ่น/เกาหลี/ไทย) — ใช้เป็นมุมมองสะท้อนตัวเอง ไม่ใช่ข้อเท็จจริงทางวิทยาศาสตร์",
+    bloodTrait: kbB.i,          // มุมความเชื่อ
+    bloodAdvice: kbB.o,         // แนวทางใช้
+    dayTrait: day.t + " — " + day.d,
+    lifePathTrait: lp.t,
+    synthesis: `มุมกรุ๊ปเลือด: ${kbB.i} · มุมวันเกิด: คุณมีพื้น${day.t} · มุมเลขชีวิต ${profile.lifePath}: ${lp.t} — จุดที่น่าสนใจคือการใช้จุดแข็งจากทั้งสามมุมพร้อมกัน`,
+    growth: kbB.o,
+    caution: kbB.w
+  };
+};
+
 // ---------- Personalization Score ----------
 Engine.personalization = function (state) {
   let s = 20; // มีวันเกิด

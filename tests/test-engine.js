@@ -8,8 +8,9 @@ function load(f, name) {
   (0, eval)(src);
 }
 load("knowledge.js", "K");
+load("kb.js", "KB");
 load("engine.js", "Engine");
-const { K, Engine } = globalThis;
+const { K, KB, Engine } = globalThis;
 
 let fail = 0;
 function check(name, cond, info) {
@@ -118,6 +119,23 @@ check("ruleAnswer มีพื้นดวง", ans2.includes("พื้นด�
 check("ruleAnswer มีเสวยอายุ", ans2.includes("เสวยอายุ"));
 check("ruleAnswer ไม่แกล้งเปิดไพ่", !ans2.includes("ไพ่ที่เปิดให้กับคำถามนี้"));
 check("ruleAnswer ยาวพอ (ลึกขึ้น)", ans2.length > 900, ans2.length);
+
+// 14) Knowledge Base (KB)
+check("KB entries ≥ 45", KB.ENTRIES.length >= 45, KB.ENTRIES.length);
+const requiredCats = ["astrology", "tarot", "numerology", "phone_number", "palmistry", "face_reading", "feng_shui", "personal_color", "fashion", "blood_type", "elements", "year_clash", "remedy", "color_fortune", "hair_color", "psychology", "safety", "accessory", "situation_color", "auspicious_time"];
+check("KB ครอบคลุมหมวดที่ต้องการ", requiredCats.every(c => KB.ENTRIES.some(e => e.c === c)),
+  requiredCats.filter(c => !KB.ENTRIES.some(e => e.c === c)).join(","));
+check("KB.get ทำงาน", KB.get("blood_type", "A") && KB.get("blood_type", "A").i.length > 5);
+check("KB.forPrompt กรองตามวัฒนธรรม", KB.forPrompt(["blood_type"], ["Japanese"]).includes("blood_type/A"));
+check("KB.forPrompt มี safe language", KB.forPrompt(["safety"], []).includes("ห้ามใช้คำ"));
+check("KB disclaimer fallback en", KB.disclaimer("belief", "ja").includes("cultural"));
+check("KB disclaimer th", KB.disclaimer("belief", "th").includes("ความเชื่อ"));
+check("KB METHOD_CATEGORIES ครบ", ["birthdate", "tarot", "palm", "face", "style", "phone", "blood", "integrated"].every(m => KB.METHOD_CATEGORIES[m] && KB.METHOD_CATEGORIES[m].length));
+
+// 15) bloodPersona
+const bpr = Engine.bloodPersona(p, "A");
+check("bloodPersona มีครบทุกส่วน", bpr && bpr.beliefNote && bpr.bloodTrait && bpr.synthesis && bpr.caution);
+check("bloodPersona กรุ๊ปไม่รู้จัก = null", Engine.bloodPersona(p, "X") === null);
 
 console.log(fail === 0 ? "\n=== ALL TESTS PASSED ===" : "\n=== " + fail + " FAILED ===");
 process.exit(fail ? 1 : 0);

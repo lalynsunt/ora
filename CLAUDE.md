@@ -8,19 +8,31 @@
 ## โครงสร้าง
 ```
 app/
-  index.html          — ทุก screen (onboarding, home, ask, tarot, num, set)
-  css/style.css       — ธีม Modern Mystic (navy+gold), CSS variables บนสุด
-  js/knowledge.js     — ตำราศาสตร์ทั้งหมด (มหาทักษา, สี, เลขศาสตร์, คู่เลขเบอร์, ทาโรต์ 22 ใบ, ราศี, คลังคำแนะนำ, คำอ่อนไหว)
-  js/engine.js        — คำนวณดวง (deterministic, seeded RNG) + safety check + rule-based answer
-  js/llm.js           — เรียก Gemini + system prompt "พี่หมอโอรา" + output filter
+  index.html          — ทุก screen (onboarding, home, ask, tarot, scan, num, set) + #modal กลาง
+  css/style.css       — ธีม Purple Mystic, CSS variables บนสุด
+  js/knowledge.js     — ตำราศาสตร์ไทย (มหาทักษา, สี, เสวยอายุ, เลขศาสตร์, คู่เลขเบอร์, ทาโรต์ 22 ใบ,
+                        ราศีละเอียด, นิสัยรายวันเกิด, ลัคนา, seasonal color, ทรงผม, คำอ่อนไหว)
+  js/kb.js            — Knowledge Base จาก 1-knowledge-engineer-ai-ontology-taxonomy (55 entries →
+                        condensed) + disclaimers localized + safe/avoid language + KB.forPrompt()
+                        แหล่งต้นทาง: C:\Users\rattanos\Documents\Codex\2026-07-08\1-knowledge-engineer-ai-ontology-taxonomy\outputs\
+                        (แก้ตำราให้แก้ที่ต้นทางก่อน แล้ว sync มาที่ kb.js)
+  js/i18n.js          — 10 ภาษา (th/en full, ที่เหลือ placeholder fallback→en), ประเทศ+cultural context,
+                        I18N.t()/apply()/detect()/promptDirective() — UI ใช้ data-i18n attributes
+  js/monetize.js      — tiers (free/plus/premium/vip) + โควตารายวัน + pricing_by_country +
+                        paywall modal + redeem code (ORA-DEV-*, ORA-KIOSK-* placeholder)
+  js/scan-tools.js    — ตรวจคุณภาพภาพ (จริง), enhance ลายมือ (จริง: contrast+sharpen),
+                        palm overlay + face region crops (placeholder ตำแหน่งมาตรฐาน — interface
+                        พร้อมสลับ CV model จริง), virtual try-on placeholder
+  js/engine.js        — คำนวณดวง (deterministic, seeded RNG) + safety + rule answer + bloodPersona
+  js/llm.js           — Gemini chat/vision/image + systemFor() (localized) + buildFacts
+                        (FACTS + MEMORY + READING_MODE single/integrated + KNOWLEDGE_CONTEXT จาก KB)
   js/app.js           — UI logic + state (localStorage key: ora_state_v1)
-                        state สำคัญ: chat (แชท 40 ข้อความล่าสุด), memory (สมุดความจำ 30 เรื่อง
-                        ล่าสุด: {d, cat, q, fb}) — ส่งเข้า LLM.buildFacts เป็นส่วน [MEMORY]
-                        เพื่อให้พี่หมอจำเรื่องเก่าและถามไถ่ต่อเนื่องได้ ห้ามส่งไปเก็บนอกเครื่องผู้ใช้
-  sw.js, manifest.webmanifest, icon.svg — PWA
-01-*.md, 02-*.md, 03-*.md — แผนธุรกิจฉบับเต็ม (reference)
-AI-OPS-PLAYBOOK.md    — วิธีใช้ AI agents บริหารทุกอย่าง
-DEPLOY.md             — ขั้นตอน deploy ฟรี (GitHub Pages)
+                        state สำคัญ: chat(40), memory(30), lang, country, blood, undertone, tier,
+                        usage(โควตารายวัน), consent{palm,face,style} — ห้ามส่งออกนอกเครื่องผู้ใช้
+  sw.js, manifest.webmanifest, icon.svg — PWA (แก้ไฟล์ app/ ต้อง bump CACHE เวอร์ชัน)
+  assets/tarot/NN.jpg — ภาพไพ่ถาวร (สร้างจากบัญชี Gemini ที่จ่ายเงิน — ดู TAROT-ART-GUIDE.md)
+01-*.md, 02-*.md, 03-*.md — แผนธุรกิจฉบับเต็ม (reference, gitignored)
+AI-OPS-PLAYBOOK.md / DEPLOY.md / STORE-ROADMAP.md / TAROT-ART-GUIDE.md — คู่มือ ops
 ```
 
 ## กฎเหล็กของ codebase

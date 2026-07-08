@@ -20,16 +20,25 @@
     <div class="logo-big">✦ ORA ✦</div>
     <p class="tagline">หมอดู AI ที่ดูจาก "วันเกิดจริงของคุณ"<br>ไม่ใช่คำทำนายเหมารวมตามราศี</p>
     <div class="card">
-      <label>ชื่อเล่นของคุณ</label>
+      <label data-i18n="onb.lang">ภาษา / Language</label>
+      <select id="ob-lang"></select>
+      <label data-i18n="onb.country">ประเทศ (เพื่อปรับคำแนะนำให้เข้ากับวัฒนธรรม)</label>
+      <select id="ob-country"></select>
+      <label data-i18n="onb.name">ชื่อเล่นของคุณ</label>
       <input id="ob-name" type="text" placeholder="เช่น พลอย" maxlength="30">
-      <label>วันเดือนปีเกิด (ค.ศ.)</label>
+      <label data-i18n="onb.dob">วันเดือนปีเกิด (ค.ศ.)</label>
       <input id="ob-dob" type="date" min="1930-01-01">
-      <label>เวลาเกิด <span class="hint">(ถ้าทราบ — ทำให้แม่นขึ้น โดยเฉพาะคนเกิดวันพุธ)</span></label>
+      <label><span data-i18n="onb.time">เวลาเกิด</span> <span class="hint" data-i18n="onb.time.hint">(ถ้าทราบ — ทำให้แม่นขึ้น โดยเฉพาะคนเกิดวันพุธ)</span></label>
       <input id="ob-time" type="time">
-      <label>อาชีพ / สิ่งที่ทำอยู่ <span class="hint">(ไม่บังคับ — ช่วยให้คำแนะนำตรงชีวิตจริง)</span></label>
+      <label><span data-i18n="onb.blood">กรุ๊ปเลือด</span> <span class="hint" data-i18n="onb.blood.hint">(ไม่บังคับ)</span></label>
+      <select id="ob-blood">
+        <option value="">—</option><option value="A">A</option><option value="B">B</option>
+        <option value="O">O</option><option value="AB">AB</option>
+      </select>
+      <label><span data-i18n="onb.job">อาชีพ / สิ่งที่ทำอยู่</span> <span class="hint" data-i18n="onb.job.hint">(ไม่บังคับ — ช่วยให้คำแนะนำตรงชีวิตจริง)</span></label>
       <input id="ob-job" type="text" placeholder="เช่น พนักงานการตลาด, เจ้าของร้านกาแฟ" maxlength="60">
-      <button id="ob-go" class="btn-primary">เปิดดวงของฉัน ✨</button>
-      <p class="disclaimer">ข้อมูลเก็บไว้ในเครื่องของคุณเท่านั้น · บริการเพื่อการสะท้อนตนเองและความบันเทิง ไม่ใช่คำแนะนำทางการแพทย์ การเงิน หรือกฎหมาย</p>
+      <button id="ob-go" class="btn-primary" data-i18n="onb.go">เปิดดวงของฉัน ✨</button>
+      <p class="disclaimer" data-i18n="onb.privacy">ข้อมูลเก็บไว้ในเครื่องของคุณเท่านั้น · บริการเพื่อการสะท้อนตนเองและความบันเทิง ไม่ใช่คำแนะนำทางการแพทย์ การเงิน หรือกฎหมาย</p>
     </div>
   </div>
 </section>
@@ -44,6 +53,16 @@
 <section id="scr-ask" class="screen hidden">
   <header class="top"><span class="logo-sm">💬 ห้องพี่หมอโอรา</span></header>
   <div id="ask-mode-note" class="mode-note"></div>
+  <div class="method-row">
+    <span class="hint" data-i18n="ask.mode">เลือกวิธีดู:</span>
+    <select id="ask-method">
+      <option value="auto" data-i18n="ask.mode.auto">อัตโนมัติ</option>
+      <option value="birthdate" data-i18n="ask.mode.birth">วันเกิดล้วน</option>
+      <option value="tarot" data-i18n="ask.mode.tarot">ไพ่นำ</option>
+      <option value="numerology" data-i18n="ask.mode.num">เลขศาสตร์</option>
+      <option value="integrated" data-i18n="ask.mode.integrated">รวมหลายศาสตร์ ⭐</option>
+    </select>
+  </div>
   <div id="ask-cats" class="chips">
     <button class="chip" data-cat="ความรัก">💕 ความรัก</button>
     <button class="chip" data-cat="การงาน">💼 การงาน</button>
@@ -124,6 +143,45 @@
     <p id="set-key-status" class="hint"></p>
   </div>
   <div class="card">
+    <h3>🌐 <span data-i18n="set.lang">ภาษา / Language</span></h3>
+    <select id="set-lang"></select>
+    <p class="hint" id="set-lang-status"></p>
+    <label data-i18n="set.country">ประเทศ / บริบทวัฒนธรรม</label>
+    <select id="set-country"></select>
+  </div>
+  <div class="card">
+    <h3>💎 <span data-i18n="set.tier">แพ็กเกจ</span>: <span id="set-tier-name" style="color:var(--gold)">FREE</span></h3>
+    <p class="hint" id="set-quota"></p>
+    <label data-i18n="set.redeem">ใส่รหัสปลดล็อก / รหัสจากตู้ ORA</label>
+    <input id="set-code" type="text" placeholder="ORA-XXXX-XXXX">
+    <button id="set-code-go" class="btn-ghost" data-i18n="common.save">บันทึก</button>
+    <p class="hint" id="set-code-status"></p>
+  </div>
+  <div class="card">
+    <h3>🎭 <span data-i18n="set.astro">ศาสตร์หลักที่ชอบ</span></h3>
+    <select id="set-astro">
+      <option value="">— อัตโนมัติตามประเทศ —</option>
+      <option value="thai">โหราศาสตร์ไทย (มหาทักษา)</option>
+      <option value="western">Western astrology</option>
+      <option value="chinese">จีน (ธาตุ/ปีนักษัตร/โหงวเฮ้ง)</option>
+      <option value="tarot">ไพ่ทาโรต์</option>
+      <option value="numerology">เลขศาสตร์</option>
+    </select>
+    <label data-i18n="set.blood">กรุ๊ปเลือด</label>
+    <select id="set-blood">
+      <option value="">—</option><option value="A">A</option><option value="B">B</option>
+      <option value="O">O</option><option value="AB">AB</option>
+    </select>
+    <label data-i18n="set.undertone">โทนสีผิว (undertone)</label>
+    <select id="set-undertone">
+      <option value="">— ไม่ทราบ (ให้ AI ดูจากรูปในแท็บสแกน) —</option>
+      <option value="warm">Warm (เหลืองทอง)</option>
+      <option value="cool">Cool (ชมพูอมฟ้า)</option>
+      <option value="neutral">Neutral</option>
+      <option value="olive">Olive</option>
+    </select>
+  </div>
+  <div class="card">
     <h3>โทนคำทำนายที่ชอบ</h3>
     <select id="set-tone">
       <option value="">— เลือก —</option>
@@ -150,15 +208,22 @@
 
 <!-- ============ Bottom Nav ============ -->
 <nav id="nav" class="hidden">
-  <button data-scr="home" class="active"><span>🌅</span>วันนี้</button>
-  <button data-scr="ask"><span>💬</span>ถามดวง</button>
-  <button data-scr="tarot"><span>🎴</span>ไพ่</button>
-  <button data-scr="scan"><span>🔮</span>สแกน</button>
-  <button data-scr="num"><span>🔢</span>ตัวเลข</button>
-  <button data-scr="set"><span>⚙️</span>ตั้งค่า</button>
+  <button data-scr="home" class="active"><span>🌅</span><span data-i18n="nav.today">วันนี้</span></button>
+  <button data-scr="ask"><span>💬</span><span data-i18n="nav.ask">ถามดวง</span></button>
+  <button data-scr="tarot"><span>🎴</span><span data-i18n="nav.tarot">ไพ่</span></button>
+  <button data-scr="scan"><span>🔮</span><span data-i18n="nav.scan">สแกน</span></button>
+  <button data-scr="num"><span>🔢</span><span data-i18n="nav.num">ตัวเลข</span></button>
+  <button data-scr="set"><span>⚙️</span><span data-i18n="nav.set">ตั้งค่า</span></button>
 </nav>
 
+<!-- Modal กลาง (consent / paywall) -->
+<div id="modal" class="hidden"></div>
+
 <script src="js/knowledge.js"></script>
+<script src="js/kb.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/monetize.js"></script>
+<script src="js/scan-tools.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/llm.js"></script>
 <script src="js/app.js"></script>

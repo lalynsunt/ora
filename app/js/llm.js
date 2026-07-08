@@ -39,7 +39,13 @@ LLM.SYSTEM = `คุณคือ "พี่หมอโอรา" หมอด�
 - ห้ามตอบเป็นแค่คำเกริ่นว่า "กำลังจะวิเคราะห์" — ต้องส่งเนื้อหาวิเคราะห์จริงครบถ้วนในข้อความเดียวเสมอ
 - จบด้วยบรรทัด: "🌸 เพื่อการสะท้อนตนเองนะคะ การตัดสินใจสำคัญใช้ข้อมูลจริงประกอบด้วยเสมอ"`;
 
+// System prompt แบบ localized: persona + safety เดิม + คำสั่งภาษา/วัฒนธรรม
+LLM.systemFor = function () {
+  return LLM.SYSTEM + "\n\n" + I18N.promptDirective();
+};
+
 // สร้าง FACTS จาก engine (โครงสร้างชัด ให้ LLM ตีความอย่างเดียว)
+// extra.methods: ["birthdate"|"tarot"|"palm"|"face"|"style"|"phone"|"blood"] หรือ ["integrated"]
 LLM.buildFacts = function (profile, extra) {
   const d = Engine.daily(profile, new Date());
   const sw = Engine.sawoey(profile, new Date());
@@ -64,12 +70,33 @@ LLM.buildFacts = function (profile, extra) {
   }
   if (extra && extra.job) lines.push(`อาชีพ/บริบทชีวิต: ${extra.job}`);
   if (extra && extra.tone) lines.push(`โทนที่ผู้ใช้ชอบ: ${extra.tone}`);
+  if (extra && extra.undertone) {
+    const kbH = KB.get("hair_color", extra.undertone);
+    lines.push(`โทนสีผิว (undertone) ที่ผู้ใช้ระบุ: ${extra.undertone}${kbH ? ` — สีผมที่เข้ากัน: ${kbH.o}` : ""}`);
+  }
   if (extra && extra.phone) lines.push(`ผลวิเคราะห์เบอร์โทร: คะแนน ${extra.phone.score}/10, ผลรวม ${extra.phone.sum}${extra.phone.sumGood ? " (" + extra.phone.sumGood + ")" : ""}, คู่เลขท้าย: ` + extra.phone.pairs.map(p => `${p.pair}=${p.t}`).join("; "));
   if (extra && extra.memory && extra.memory.length) {
     lines.push(`[MEMORY — เรื่องที่ผู้ใช้เคยคุยกับพี่หมอไว้ก่อนหน้า (ล่าสุดอยู่ล่างสุด)]`);
     extra.memory.slice(-6).forEach(m =>
       lines.push(`- ${m.d}${m.cat ? " [" + m.cat + "]" : ""}: "${m.q}"${m.fb ? ` (feedback ของผู้ใช้ต่อคำทำนายครั้งนั้น: ${m.fb})` : ""}`));
   }
+  if (extra && extra.blood) {
+    const kbB = KB.get("blood_type", extra.blood);
+    if (kbB) lines.push(`กรุ๊ปเลือด (มุมมองความเชื่อเอเชียตะวันออก): ${extra.blood} — ${kbB.i} | แนวทาง: ${kbB.o} | ระวัง: ${kbB.w}`);
+  }
+  // ---- โหมดการอ่าน: ศาสตร์เดียว vs รวมหลายศาสตร์ ----
+  const methods = (extra && extra.methods && extra.methods.length) ? extra.methods : ["integrated"];
+  const single = methods.length === 1 && methods[0] !== "integrated";
+  if (single) {
+    lines.push(`[READING_MODE] single-method: ใช้เฉพาะศาสตร์ "${methods[0]}" เท่านั้น — ห้ามดึงศาสตร์อื่นมาปน ตอบให้จบสมบูรณ์ในศาสตร์เดียว ห้ามชวนใช้ศาสตร์อื่นแทรกระหว่างคำตอบ`);
+  } else {
+    lines.push(`[READING_MODE] integrated: รวมหลายศาสตร์ — ทุก insight ต้องระบุที่มา ("จากวันเกิด...", "จากไพ่...", "จากลายมือ...") สรุปจุดที่หลายศาสตร์สอดคล้องกัน (บอกจำนวนศาสตร์ที่ชี้ตรงกัน) ถ้าขัดแย้งให้เสนอเป็นหลายมุมมองไม่ฟันธง ปิดท้ายด้วย Integrated Advice + action plan 7 วัน`);
+  }
+  // ---- Knowledge context จากฐานความรู้ (กติกาการตีความ) ----
+  const cats = methods.reduce((a, m) => a.concat(KB.METHOD_CATEGORIES[m] || []), []);
+  const kbCtx = KB.forPrompt([...new Set(cats)], I18N.culturalContext());
+  if (kbCtx) lines.push(kbCtx);
+  lines.push(`[DISCLAIMER ที่ต้องปิดท้ายคำตอบ] ${KB.disclaimer("belief", I18N.lang)}`);
   return lines.join("\n");
 };
 
@@ -89,7 +116,7 @@ LLM.chat = async function (apiKey, facts, history) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: LLM.SYSTEM }] },
+            systemInstruction: { parts: [{ text: LLM.systemFor() }] },
             contents,
             generationConfig: LLM.genConfig(model, 4096)
           })
@@ -167,7 +194,7 @@ LLM.vision = async function (apiKey, kind, base64Data, mimeType, facts) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: LLM.SYSTEM }] },
+            systemInstruction: { parts: [{ text: LLM.systemFor() }] },
             contents,
             generationConfig: LLM.genConfig(model, 8192)
           })

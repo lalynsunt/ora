@@ -202,6 +202,38 @@ nav button.active { color: var(--gold); text-shadow: 0 0 12px rgba(230,195,107,.
 }
 .tcard.picked { box-shadow: 0 0 18px rgba(230,195,107,.6); }
 
+/* ---- Modal (consent / paywall) ---- */
+#modal { position: fixed; inset: 0; background: rgba(10,4,32,.75); backdrop-filter: blur(4px);
+  z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-card { background: var(--card); border: 1px solid rgba(230,195,107,.4); border-radius: var(--radius);
+  padding: 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0,0,0,.6); }
+.modal-card h3 { color: var(--gold); margin-bottom: 10px; }
+.tier-row { background: var(--card2); border-radius: 10px; padding: 10px 14px; margin: 8px 0; line-height: 1.5; }
+
+/* ---- method selector (ห้องถามดวง) ---- */
+.method-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.method-row select { width: auto; flex: 1; padding: 8px 12px; font-size: .88rem; }
+
+/* ---- upsell เงียบๆ ---- */
+.upsell-card { background: rgba(230,195,107,.08); border: 1px dashed rgba(230,195,107,.4);
+  border-radius: 12px; padding: 10px 14px; margin: 8px 0; font-size: .85rem; line-height: 1.6; }
+
+/* ---- palm ก่อน/หลัง + overlay ---- */
+.palm-compare { display: flex; gap: 10px; }
+.palm-compare figure { flex: 1; margin: 0; }
+.palm-compare img, .palm-overlay img { width: 100%; border-radius: 10px; border: 1px solid rgba(230,195,107,.3); }
+.palm-compare figcaption, .palm-overlay figcaption, .face-crops figcaption {
+  font-size: .75rem; color: var(--muted); text-align: center; margin-top: 4px; }
+.palm-overlay { margin: 10px 0 0; }
+
+/* ---- face crops ---- */
+.face-crops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.face-crops figure { margin: 0; }
+.face-crops img { width: 100%; border-radius: 8px; border: 1px solid rgba(177,140,255,.35); }
+
+.card2-box { background: var(--card2); border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+
 /* ---- หน้าสแกน ---- */
 .scan-kinds { margin-bottom: 12px; }
 #scan-preview { width: 100%; max-height: 320px; object-fit: contain; border-radius: 12px; margin-top: 12px; border: 1px solid rgba(230,195,107,.3); }

@@ -11,6 +11,55 @@
   let askCategory = null;
   let tarotPicked = [];
 
+  // ---------- i18n init: state → I18N (หรือ detect จาก device เป็น suggestion) ----------
+  const det = I18N.detect();
+  state.deviceLocale = det.device_locale;
+  I18N.lang = state.lang || det.lang;
+  I18N.country = state.country || det.country;
+
+  function fillLangSelect(sel, val) {
+    sel.innerHTML = I18N.LANGS.map(l =>
+      `<option value="${l.code}">${l.native}${l.status === "placeholder" ? " *" : ""}</option>`).join("");
+    sel.value = val;
+  }
+  function fillCountrySelect(sel, val) {
+    sel.innerHTML = I18N.COUNTRIES.map(c =>
+      `<option value="${c.code}">${I18N.lang === "th" ? c.th : c.en}</option>`).join("");
+    sel.value = val;
+  }
+  fillLangSelect($("ob-lang"), I18N.lang);
+  fillCountrySelect($("ob-country"), I18N.country);
+  $("ob-lang").addEventListener("change", () => {
+    I18N.set($("ob-lang").value, null);
+    fillCountrySelect($("ob-country"), $("ob-country").value); // ชื่อประเทศเปลี่ยนภาษาตาม
+  });
+  $("ob-country").addEventListener("change", () => { I18N.country = $("ob-country").value; });
+
+  // ---------- Modal helpers (consent ฯลฯ) ----------
+  function showModal(html) {
+    const m = $("modal");
+    m.innerHTML = `<div class="modal-card">${html}</div>`;
+    m.classList.remove("hidden");
+    return m;
+  }
+  function hideModal() { $("modal").classList.add("hidden"); }
+
+  // consent ก่อนใช้ภาพ (จำการยินยอมรายประเภทไว้ใน state.consent)
+  function askConsent(kind) {
+    return new Promise(resolve => {
+      state.consent = state.consent || {};
+      if (state.consent[kind]) return resolve(true);
+      showModal(`
+        <h3>🔒 ${I18N.t("scan.consent.title")}</h3>
+        <p class="list-line" style="font-size:.9rem">${I18N.t("scan.consent.body")}</p>
+        <p class="hint">✓ ${I18N.t("scan.consent.keep")}</p>
+        <button class="btn-primary" id="cs-ok">${I18N.t("scan.consent.ok")}</button>
+        <button class="btn-ghost" id="cs-no">${I18N.t("scan.consent.no")}</button>`);
+      $("cs-ok").onclick = () => { state.consent[kind] = Date.now(); saveState(); hideModal(); resolve(true); };
+      $("cs-no").onclick = () => { hideModal(); resolve(false); };
+    });
+  }
+
   function loadState() {
     try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; }
   }
@@ -62,6 +111,10 @@
     state.dob = dob;
     state.birthTime = $("ob-time").value || null;
     state.job = $("ob-job").value.trim() || null;
+    state.blood = $("ob-blood").value || null;
+    state.lang = $("ob-lang").value;
+    state.country = $("ob-country").value;
+    I18N.set(state.lang, state.country);
     saveState();
     boot();
   });
@@ -74,6 +127,7 @@
     }
     profile = Engine.buildProfile(state);
     chatHistory = state.chat || [];
+    I18N.apply();
     show("home");
   }
 
@@ -140,6 +194,7 @@
       </div>
       <div class="card affirm">💬 "${esc(d.affirm)}"</div>
       ${baseChartCard()}
+      ${bloodCard()}
       <div class="card">
         <p class="hint center">คำทำนายวันนี้ตรงกับคุณแค่ไหน?</p>
         ${fbWidget("daily:" + d.dateStr)}
@@ -173,6 +228,22 @@
           <p class="list-line">โทนช่วงนี้: <b style="color:${gradeColor}">${esc(sw.theme.g)}</b> — ${esc(sw.theme.d)}</p>
           <p class="list-line">⏭️ ช่วงถัดไป: <b>${esc(sw.nextTheme.t)}</b> (โทน${esc(sw.nextTheme.g)}) เริ่มราวปี พ.ศ. ${sw.nextStartYear + 543} (อายุ ${Math.floor(sw.endAge)} ปี)</p>
         </div>` : ""}
+      </div>`;
+  }
+
+  // การ์ดนิสัยจากกรุ๊ปเลือด+วันเกิด (belief layer — ระบุชัด)
+  function bloodCard() {
+    if (!state.blood) return "";
+    const bp = Engine.bloodPersona(profile, state.blood);
+    if (!bp) return "";
+    return `
+      <div class="card">
+        <h3>🩸 นิสัยจากกรุ๊ปเลือด ${esc(bp.blood)} × วันเกิด</h3>
+        <p class="hint">✨ ${esc(bp.beliefNote)}</p>
+        <p class="list-line"><b>มุมกรุ๊ปเลือด:</b> ${esc(bp.bloodTrait)}</p>
+        <p class="list-line"><b>มุมวันเกิด:</b> ${esc(bp.dayTrait)}</p>
+        <p class="list-line"><b>ภาพรวมสามมุม:</b> ${esc(bp.synthesis)}</p>
+        <p class="list-line">✅ <b>แนวทางใช้:</b> ${esc(bp.growth)}</p>
       </div>`;
   }
 
@@ -242,10 +313,29 @@
 
     const q = (askCategory ? `[หมวด: ${askCategory}] ` : "") + text;
 
+    // ---- โหมดการอ่าน: ศาสตร์เดียว / รวมหลายศาสตร์ ----
+    const sel = $("ask-method").value;
+    let methods;
+    if (sel === "integrated") {
+      if (!MZ.can(state, "integrated")) { MZ.showPaywall(state, I18N.t("pay.benefit.premium")); return; }
+      methods = ["integrated"];
+    } else if (sel === "auto") methods = ["integrated"];
+    else if (sel === "numerology") methods = ["phone"];
+    else methods = [sel]; // birthdate | tarot
+
     if (state.apiKey) {
+      // โควตา AI รายวันตาม tier — โหมดตำราไม่จำกัดเสมอ
+      if (!MZ.can(state, "aiAsk")) {
+        appendMsg("bot", "🕐 " + I18N.t("quota.ask"));
+        const reply = Engine.ruleAnswer(profile, askCategory, text);
+        appendMsg("bot", reply); pushChat("bot", reply);
+        MZ.showPaywall(state, I18N.t("quota.ask"));
+        return;
+      }
+      MZ.consume(state, "aiAsk"); saveState();
       const typingEl = appendMsg("bot", "พี่หมอกำลังเปิดผังดวงของคุณ...", true);
       try {
-        const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory });
+        const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory, blood: state.blood, methods });
         const history = chatHistory.slice(-10).map(m => ({ role: m.role, text: m.text }));
         history[history.length - 1] = { role: "user", text: q };
         const reply = await LLM.chat(state.apiKey, facts, history);
@@ -254,6 +344,11 @@
         pushChat("bot", reply);
         $("chat-box").insertAdjacentHTML("beforeend",
           `<div style="margin:4px 0 10px">${fbWidget("ask")}</div>`);
+        // upsell เงียบๆ หลังจบ single-method (หลักการ: ศาสตร์เดียวต้องจบสมบูรณ์ ไม่ยัดเยียด)
+        if (methods.length === 1 && methods[0] !== "integrated" && !state.upsellOff) {
+          $("chat-box").insertAdjacentHTML("beforeend",
+            `<div class="upsell-card">💎 อยากเห็นมุมที่หลายศาสตร์ชี้ตรงกัน? ลองโหมด "รวมหลายศาสตร์" ได้จากเมนูด้านบน <button class="fb-btn" onclick="this.parentElement.remove()">ปิด</button></div>`);
+        }
       } catch (err) {
         typingEl.remove();
         appendMsg("bot", "ขอโทษค่ะ เชื่อมต่อ AI ไม่สำเร็จ (" + esc(err.message) + ")\nตรวจสอบ API key ในหน้าตั้งค่า หรือลองใหม่อีกครั้งนะคะ — ระหว่างนี้พี่หมอตอบแบบตำราให้ก่อนค่ะ 🙏\n\n" + Engine.ruleAnswer(profile, askCategory, text));
@@ -484,9 +579,39 @@
       <p class="list-line" style="margin-top:10px"><b>คู่เลขส่วนหน้า:</b></p>
       ${head.map(p => `<div class="pair-line"><span class="pair-badge ${cls(p.s)}">${p.pair}</span><span>${esc(p.t)}</span></div>`).join("")}
       <p class="hint" style="margin-top:8px">หลักการอ่าน: เลขแต่ละตัวถือพลังดาว (1=อาทิตย์ 2=จันทร์ 3=อังคาร 4=พุธ 5=พฤหัสฯ 6=ศุกร์ 7=เสาร์ 8=ราหู 9=เกตุ) — คู่เลขคือการส่งพลังร่วมกันของสองดาว ตำแหน่งท้ายเบอร์มีอิทธิพลต่อผู้ใช้มากที่สุด</p>
-      <p class="disclaimer">การวิเคราะห์ตามตำราเลขศาสตร์ เพื่อความบันเทิงและความสบายใจ — เบอร์ไม่ได้กำหนดชีวิต ความตั้งใจของคุณต่างหากค่ะ</p>
+      <div class="card2-box">
+        <p class="list-line"><b>🎯 อยากได้เบอร์ที่เสริมเป้าหมายไหน?</b> (แนะนำ pattern ตามความเชื่อ — เบอร์ปัจจุบันของคุณใช้ได้เสมอ ไม่จำเป็นต้องเปลี่ยน)</p>
+        <div class="chips" id="phone-goals">
+          ${Object.keys(PHONE_GOALS).map(g => `<button class="chip" data-goal="${g}">${g}</button>`).join("")}
+        </div>
+        <div id="phone-goal-result"></div>
+      </div>
+      <p class="disclaimer">การวิเคราะห์ตามตำราเลขศาสตร์ (belief-based numerology) เพื่อความบันเทิงและความสบายใจ — ไม่ใช่ข้อเท็จจริงทางวิทยาศาสตร์ เบอร์ไม่ได้กำหนดชีวิต ความตั้งใจของคุณต่างหากค่ะ</p>
       ${fbWidget("phone")}`;
+    document.querySelectorAll("#phone-goals .chip").forEach(ch =>
+      ch.addEventListener("click", () => {
+        document.querySelectorAll("#phone-goals .chip").forEach(c => c.classList.remove("sel"));
+        ch.classList.add("sel");
+        const goal = ch.dataset.goal;
+        const pairs = PHONE_GOALS[goal];
+        const aff = MZ.affiliatePhoneMarketplace();
+        $("phone-goal-result").innerHTML = `
+          <p class="list-line" style="margin-top:8px"><b>คู่เลขที่ตำรานิยมสำหรับ${esc(goal)}:</b> ${pairs.map(p =>
+            `<span class="pair-badge good" style="margin:2px">${p}</span>`).join(" ")}</p>
+          <p class="hint">${pairs.map(p => K.PHONE_PAIRS[p] ? `${p} = ${K.PHONE_PAIRS[p].t}` : "").filter(Boolean).join(" · ")}</p>
+          <p class="hint">💡 มีคู่เลขเหล่านี้ในตำแหน่งท้ายเบอร์ = อิทธิพลแรงสุดตามตำรา</p>
+          <button class="btn-ghost" disabled>🛍️ ${esc(I18N.lang === "th" ? aff.message_th : aff.message_en)}</button>`;
+      }));
   });
+
+  // pattern เบอร์ตามเป้าหมาย (จากตาราง K.PHONE_PAIRS — belief-based)
+  const PHONE_GOALS = {
+    "การงาน-ผู้บริหาร": ["89", "98", "19", "91", "45", "54"],
+    "การเงิน-ค้าขาย": ["24", "42", "46", "64", "89", "98"],
+    "ความรัก": ["56", "65", "36", "63", "15"],
+    "เสน่ห์-การเจรจา": ["15", "51", "36", "63", "24"],
+    "ผู้ใหญ่สนับสนุน": ["15", "51", "45", "54"]
+  };
 
   // ---------- SCAN: ลายมือ / โหงวเฮ้ง / โทนสี-สไตล์ (Gemini vision) ----------
   let scanKind = "palm";
@@ -514,7 +639,10 @@
       $("scan-result").innerHTML = "";
       $("scan-desc").innerHTML = SCAN_DESC[scanKind];
     }));
-  $("scan-pick").addEventListener("click", () => $("scan-file").click());
+  $("scan-pick").addEventListener("click", async () => {
+    const ok = await askConsent(scanKind); // consent localized ก่อนแตะรูปเสมอ
+    if (ok) $("scan-file").click();
+  });
   $("scan-file").addEventListener("change", () => {
     const file = $("scan-file").files[0];
     if (!file) return;
@@ -528,21 +656,69 @@
       cv.height = Math.round(img.height * scale);
       cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
       const dataUrl = cv.toDataURL("image/jpeg", 0.85);
-      scanImage = { base64: dataUrl.split(",")[1], mime: "image/jpeg" };
+      scanImage = { base64: dataUrl.split(",")[1], mime: "image/jpeg", dataUrl };
       $("scan-preview").src = dataUrl;
       $("scan-preview-wrap").classList.remove("hidden");
       URL.revokeObjectURL(img.src);
+      prepScanExtras(dataUrl); // ตรวจคุณภาพ + (ลายมือ) ปรับภาพ/overlay
     };
     img.src = URL.createObjectURL(file);
   });
+
+  // ตรวจคุณภาพภาพ + สำหรับลายมือ: แสดง ก่อน/หลังปรับ + เส้นตำแหน่งโดยประมาณ
+  async function prepScanExtras(dataUrl) {
+    $("scan-result").innerHTML = "";
+    const qtips = ScanTools.QUALITY_TIPS[I18N.lang] || ScanTools.QUALITY_TIPS.en;
+    let html = "";
+    try {
+      const q = await ScanTools.checkImageQuality(dataUrl);
+      html += `<div class="card"><h3>🔍 คุณภาพภาพ: ${q.score}/100 ${q.ok ? "✓" : ""}</h3>`;
+      if (!q.ok) {
+        html += q.issues.map(i => `<p class="list-line">⚠️ ${esc(qtips[i] || i)}</p>`).join("");
+        html += `<p class="hint">ยังวิเคราะห์ได้ แต่ภาพที่ดีขึ้น = คำตอบละเอียดขึ้น — พี่หมอจะไม่เดาในส่วนที่มองไม่เห็น</p>`;
+      }
+      html += `</div>`;
+      if (scanKind === "palm") {
+        const enhanced = await ScanTools.enhancePalmImage(dataUrl);
+        const det = await ScanTools.detectPalmLines(dataUrl);
+        const overlay = await ScanTools.generatePalmOverlay(enhanced, det);
+        html += `
+          <div class="card"><h3>🖐️ ภาพลายมือของคุณ</h3>
+            <div class="palm-compare">
+              <figure><img src="${dataUrl}" alt="ต้นฉบับ"><figcaption>ต้นฉบับ</figcaption></figure>
+              <figure><img src="${enhanced}" alt="ปรับให้เห็นเส้นชัด"><figcaption>ปรับเส้นชัดขึ้น</figcaption></figure>
+            </div>
+            <figure class="palm-overlay"><img src="${overlay}" alt="ตำแหน่งเส้นหลัก">
+              <figcaption>ตำแหน่งเส้นหลัก${det.isMock ? "โดยประมาณ (ตำแหน่งมาตรฐาน — ระบบชี้ตำแหน่งจริงจะมาในรุ่นถัดไป)" : ""}</figcaption></figure>
+          </div>`;
+      }
+    } catch (e) { /* เครื่องมือภาพล้ม — ไม่ขวางการวิเคราะห์ */ }
+    $("scan-result").innerHTML = html;
+  }
   $("scan-go").addEventListener("click", async () => {
     if (!scanImage || !state.apiKey) return;
-    $("scan-result").innerHTML = `<div class="card"><p class="hint">🔮 พี่หมอกำลังเพ่งพิจารณาภาพของคุณ... (10–20 วินาที)</p></div>`;
+    if (!MZ.can(state, "scan")) { MZ.showPaywall(state, I18N.t("quota.scan")); return; }
+    MZ.consume(state, "scan"); saveState();
+    const old = document.getElementById("scan-ai-result");
+    if (old) old.remove();
+    $("scan-result").insertAdjacentHTML("beforeend",
+      `<div class="card" id="scan-ai-result"><p class="hint">🔮 พี่หมอกำลังเพ่งพิจารณาภาพของคุณ... (10–20 วินาที)</p></div>`);
     try {
-      const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory });
+      const facts = LLM.buildFacts(profile, { job: state.job, tone: state.tone, memory: state.memory, blood: state.blood, methods: [scanKind] });
       const reply = await LLM.vision(state.apiKey, scanKind, scanImage.base64, scanImage.mime, facts);
-      $("scan-result").innerHTML = `<div class="card"><div class="msg bot" style="max-width:100%">${md(reply)}</div>
-        <p class="hint center" style="margin-top:8px">ผลวิเคราะห์ตรงใจแค่ไหน?</p>${fbWidget("scan:" + scanKind)}</div>`;
+      // สำหรับโหงวเฮ้ง: แนบ crop ส่วนใบหน้าประกอบคำอธิบาย (ตำแหน่งมาตรฐาน — รอ landmark จริง)
+      let cropsHtml = "";
+      if (scanKind === "face") {
+        try {
+          const det = await ScanTools.detectFaceRegions(scanImage.dataUrl);
+          const crops = await ScanTools.cropFaceRegions(scanImage.dataUrl, det);
+          cropsHtml = `<div class="face-crops">` + crops.map(c =>
+            `<figure><img src="${c.dataUrl}" alt="${esc(c.th)}"><figcaption>${esc(c.th)}</figcaption></figure>`).join("") +
+            `</div><p class="hint">ตำแหน่ง crop เป็นสัดส่วนมาตรฐานของภาพหน้าตรง${det.isMock ? " (ระบบชี้ตำแหน่งจริงจะมาในรุ่นถัดไป)" : ""}</p>`;
+        } catch (e) { /* crop ไม่ได้ก็ข้าม */ }
+      }
+      document.getElementById("scan-ai-result").innerHTML = `${cropsHtml}<div class="msg bot" style="max-width:100%">${md(reply)}</div>
+        <p class="hint center" style="margin-top:8px">ผลวิเคราะห์ตรงใจแค่ไหน?</p>${fbWidget("scan:" + scanKind)}`;
       Engine.remember(state, { d: new Date().toISOString().slice(0, 10), cat: "สแกน-" + scanKind, q: "วิเคราะห์" + (scanKind === "palm" ? "ลายมือ" : scanKind === "face" ? "โหงวเฮ้ง" : "โทนสี") });
       saveState();
       scanImage = null; // ไม่เก็บภาพไว้ในหน่วยความจำต่อ
@@ -561,6 +737,21 @@
       : s < 70 ? "กำลังดี! ยิ่งถาม-ยิ่งให้ feedback ระบบยิ่งรู้จักคุณ" : "ดวงของคุณเฉพาะตัวมากแล้วค่ะ ✨");
     $("set-key").value = state.apiKey || "";
     $("set-key-status").textContent = state.apiKey ? "✅ โหมด AI เปิดใช้งานอยู่" : "ยังไม่ได้ใส่ key — ใช้โหมดตำราอยู่";
+    // ---- ภาษา/ประเทศ ----
+    fillLangSelect($("set-lang"), I18N.lang);
+    fillCountrySelect($("set-country"), I18N.country);
+    $("set-lang-status").textContent = I18N.translationStatus() === "placeholder"
+      ? "* ภาษานี้ยังเป็นเวอร์ชันเริ่มต้น (UI จะแสดงภาษาอังกฤษ, AI ตอบภาษานั้นได้เมื่อเปิดโหมด AI)" : "";
+    // ---- tier/quota ----
+    const tierName = MZ.tier(state).toUpperCase();
+    $("set-tier-name").textContent = tierName;
+    const tcfg = MZ.TIERS[MZ.tier(state)];
+    const u = MZ.usageToday(state);
+    $("set-quota").textContent = `วันนี้ใช้: ถาม AI ${u.aiAsk}/${tcfg.aiAskPerDay} · สแกน ${u.scan}/${tcfg.scanPerDay} · Integrated: ${tcfg.integrated ? "✓" : "ต้อง Premium"}`;
+    // ---- prefs ----
+    $("set-astro").value = state.astroSystem || "";
+    $("set-blood").value = state.blood || "";
+    $("set-undertone").value = state.undertone || "";
     $("set-tone").value = state.tone || "";
     const memN = (state.memory || []).length;
     $("set-memory").textContent = memN
@@ -573,6 +764,24 @@
     state.apiKey = $("set-key").value.trim() || null;
     saveState(); renderSettings();
   });
+  $("set-lang").addEventListener("change", () => {
+    state.lang = $("set-lang").value; I18N.set(state.lang, null);
+    saveState(); renderSettings();
+  });
+  $("set-country").addEventListener("change", () => {
+    state.country = $("set-country").value; I18N.set(null, state.country);
+    saveState(); renderSettings();
+  });
+  $("set-code-go").addEventListener("click", () => {
+    const r = MZ.redeem(state, $("set-code").value);
+    $("set-code-status").textContent = r.ok
+      ? `✅ ปลดล็อก ${r.tier.toUpperCase()} สำเร็จ${r.kiosk ? " (สิทธิ์จากตู้ ORA)" : ""}`
+      : "รหัสไม่ถูกต้องค่ะ";
+    if (r.ok) { saveState(); renderSettings(); }
+  });
+  $("set-astro").addEventListener("change", () => { state.astroSystem = $("set-astro").value || null; saveState(); });
+  $("set-blood").addEventListener("change", () => { state.blood = $("set-blood").value || null; saveState(); });
+  $("set-undertone").addEventListener("change", () => { state.undertone = $("set-undertone").value || null; saveState(); });
   $("set-tone").addEventListener("change", () => {
     state.tone = $("set-tone").value || null; saveState(); renderSettings();
   });
